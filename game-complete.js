@@ -2,48 +2,21 @@
 // LULU'S TINY YOU - Complete Game with All Features
 // ============================================
 
-const SAVE_KEY = 'lulu-tiny-you-v4';
+const SAVE_KEY = 'lulu-tiny-you-v5'; // New version for larger map
 const CANVAS_WIDTH = 360;
 const CANVAS_HEIGHT = 420;
 const TILE_SIZE = 24;
-const MAP_WIDTH = 15;
-const MAP_HEIGHT = 15;
+// MAP_WIDTH and MAP_HEIGHT are now defined in nyc-map-data.js
 
-// NYC Map Tiles (Pokemon-style)
-// 0 = grass, 1 = road, 2 = building, 3 = water, 4 = park, 5 = bridge
-const NYC_MAP = [
-    [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
-    [3,2,2,2,1,1,1,1,1,2,2,2,2,2,3],
-    [3,2,4,4,1,2,2,2,1,2,2,2,2,2,3],
-    [3,2,4,4,1,1,1,1,1,1,1,1,2,2,3],
-    [3,1,1,1,1,2,2,2,1,2,2,1,1,1,3],
-    [3,2,2,2,1,2,2,2,1,2,2,1,2,2,3],
-    [3,2,2,2,1,1,1,1,1,1,1,1,2,2,3],
-    [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],
-    [3,2,2,2,1,1,1,1,1,1,1,1,2,2,3],
-    [3,2,2,2,1,2,2,2,1,2,2,1,2,2,3],
-    [3,1,1,1,1,2,2,2,1,2,2,1,1,1,3],
-    [3,2,2,2,1,1,1,1,1,1,1,1,2,2,3],
-    [3,2,2,2,1,2,2,2,1,2,2,2,2,2,3],
-    [3,2,2,2,1,1,1,1,1,2,2,2,2,2,3],
-    [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
-];
-
-// POI Locations on map
-const MAP_POIS = [
-    { name: "Central Park", x: 3, y: 2, emoji: "🌳", id: "park" },
-    { name: "Times Square", x: 7, y: 4, emoji: "🎭", id: "times" },
-    { name: "Brooklyn Bridge", x: 7, y: 7, emoji: "🌉", id: "bridge" },
-    { name: "Liberty Island", x: 1, y: 10, emoji: "🗽", id: "liberty" },
-    { name: "Empire State", x: 8, y: 5, emoji: "🏢", id: "empire" },
-    { name: "Museum", x: 10, y: 3, emoji: "🏛️", id: "museum" }
-];
+// Use the larger NYC map and POIs from nyc-map-data.js
+const NYC_MAP = window.NYC_MAP_LARGE;
+const MAP_POIS = window.MAP_POIS_LARGE;
 
 // Save Manager
 class SaveManager {
     static createDefaultSave() {
         return {
-            version: 4,
+            version: 5,
             lastSeenISO: new Date().toISOString(),
             lastUpdateTime: Date.now(),
             stats: { 
@@ -56,7 +29,7 @@ class SaveManager {
             },
             currency: { hearts: 0, coins: 0 },
             inventory: [],
-            player: { x: 7, y: 6, facing: 'down' },
+            player: { x: 26, y: 15, facing: 'down' }, // Start at your UES apartment
             map: { 
                 visitedPOIs: [],
                 currentMap: 'nyc'
@@ -84,7 +57,7 @@ class SaveManager {
             const saved = localStorage.getItem(SAVE_KEY);
             if (!saved) return this.createDefaultSave();
             const data = JSON.parse(saved);
-            if (data.version !== 4) return this.createDefaultSave();
+            if (data.version !== 5) return this.createDefaultSave();
             return data;
         } catch (e) {
             return this.createDefaultSave();
@@ -117,6 +90,13 @@ class TamagotchiGame {
         
         // Initialize map renderer
         this.mapRenderer = new MapRenderer(this);
+        
+        // Initialize camera system
+        this.camera = new CameraSystem(this);
+        this.camera.jumpTo(this.save.player.x, this.save.player.y);
+        
+        // Initialize fast travel
+        this.fastTravel = new FastTravelSystem(this);
         
         // Sprite state
         this.sprite = {
@@ -198,12 +178,41 @@ class TamagotchiGame {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
             
+            // Handle fast travel menu first
+            if (this.fastTravel && this.fastTravel.isOpen) {
+                if (this.fastTravel.handleKey(e.key)) {
+                    return;
+                }
+            }
+            
             if (this.currentScreen === 'map') {
-                if (e.key === 'ArrowUp' || e.key === 'w') this.movePlayer(0, -1);
-                if (e.key === 'ArrowDown' || e.key === 's') this.movePlayer(0, 1);
-                if (e.key === 'ArrowLeft' || e.key === 'a') this.movePlayer(-1, 0);
-                if (e.key === 'ArrowRight' || e.key === 'd') this.movePlayer(1, 0);
-                if (e.key === ' ' || e.key === 'Enter') this.interactWithPOI();
+                // Movement keys
+                if (!this.fastTravel.isOpen) {
+                    if (e.key === 'ArrowUp' || e.key === 'w') this.movePlayer(0, -1);
+                    if (e.key === 'ArrowDown' || e.key === 's') this.movePlayer(0, 1);
+                    if (e.key === 'ArrowLeft' || e.key === 'a') this.movePlayer(-1, 0);
+                    if (e.key === 'ArrowRight' || e.key === 'd') this.movePlayer(1, 0);
+                    if (e.key === ' ' || e.key === 'Enter') this.interactWithPOI();
+                }
+                
+                // Fast travel toggle
+                if (e.key === 't' || e.key === 'T') {
+                    if (this.fastTravel.isOpen) {
+                        this.fastTravel.close();
+                    } else {
+                        this.fastTravel.open();
+                    }
+                }
+                
+                // Menu toggle
+                if (e.key === 'm' || e.key === 'M') {
+                    this.toggleMenu();
+                }
+                
+                // Photo booth
+                if (e.key === 'p' || e.key === 'P') {
+                    this.photoBooth();
+                }
             } else if (this.currentMinigame === 'danceBattle' && this.danceBattle) {
                 this.danceBattle.handleKey(e.key);
             }
@@ -218,11 +227,21 @@ class TamagotchiGame {
         const x = e.offsetX;
         const y = e.offsetY;
         
+        // Handle fast travel menu clicks first
+        if (this.fastTravel && this.fastTravel.isOpen) {
+            if (this.fastTravel.handleClick(x, y)) {
+                return;
+            }
+        }
+        
         if (this.currentScreen === 'map') {
-            // Convert click to tile position
-            const tileX = Math.floor(x / TILE_SIZE);
-            const tileY = Math.floor((y - 40) / TILE_SIZE); // Account for HUD
-            this.movePlayerTo(tileX, tileY);
+            // Convert click to world position using camera
+            if (this.camera) {
+                const worldPos = this.camera.screenToWorld(x, y - 40);
+                const tileX = Math.floor(worldPos.x / TILE_SIZE);
+                const tileY = Math.floor(worldPos.y / TILE_SIZE);
+                this.movePlayerTo(tileX, tileY);
+            }
         } else if (this.currentMinigame) {
             this.handleMinigameClick(x, y);
         }
@@ -367,9 +386,14 @@ class TamagotchiGame {
             this.updateMinigame(deltaTime);
         }
         
-        // Update map renderer
-        if (this.currentScreen === 'map' && this.mapRenderer) {
-            this.mapRenderer.update(deltaTime);
+        // Update map renderer and camera
+        if (this.currentScreen === 'map') {
+            if (this.mapRenderer) {
+                this.mapRenderer.update(deltaTime);
+            }
+            if (this.camera) {
+                this.camera.update(this.save.player.x, this.save.player.y, deltaTime);
+            }
         }
         
         // Check for ring event
@@ -609,9 +633,14 @@ class TamagotchiGame {
     // ===== MAP SCREEN =====
     
     renderMap() {
-        // Use enhanced map renderer
-        if (this.mapRenderer) {
-            this.mapRenderer.render(this.ctx, this.save.player.x, this.save.player.y);
+        // Use enhanced map renderer with camera
+        if (this.mapRenderer && this.camera) {
+            this.mapRenderer.render(this.ctx, this.save.player.x, this.save.player.y, this.camera, NYC_MAP);
+            
+            // Render fast travel menu if open
+            if (this.fastTravel) {
+                this.fastTravel.render(this.ctx);
+            }
             
             // Map HUD overlay
             this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -619,11 +648,33 @@ class TamagotchiGame {
             this.ctx.fillStyle = '#fff';
             this.ctx.font = '10px monospace';
             this.ctx.textAlign = 'left';
-            this.ctx.fillText('🗽 NYC Map - Use WASD/Arrows to move', 10, 15);
-            this.ctx.fillText(`📍 Location: (${this.save.player.x}, ${this.save.player.y})`, 10, 28);
+            
+            // Show current neighborhood
+            const neighborhood = this.getCurrentNeighborhood();
+            this.ctx.fillText(`📍 ${neighborhood}`, 10, 15);
+            this.ctx.fillText(`Coords: (${this.save.player.x}, ${this.save.player.y})`, 10, 28);
+            
             this.ctx.textAlign = 'right';
-            this.ctx.fillText('Press SPACE at POIs', CANVAS_WIDTH - 10, 28);
+            this.ctx.fillText('T: Fast Travel | SPACE: Interact', CANVAS_WIDTH - 10, 15);
+            this.ctx.fillText('M: Menu | P: Photo', CANVAS_WIDTH - 10, 28);
         }
+    }
+    
+    getCurrentNeighborhood() {
+        // Find closest neighborhood
+        let closestDist = Infinity;
+        let closestName = "NYC";
+        
+        for (const key in NEIGHBORHOODS) {
+            const [nx, ny] = key.split(',').map(n => parseInt(n));
+            const dist = Math.abs(this.save.player.x - nx) + Math.abs(this.save.player.y - ny);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestName = NEIGHBORHOODS[key];
+            }
+        }
+        
+        return closestName;
     }
 
     movePlayer(dx, dy) {
@@ -690,6 +741,12 @@ class TamagotchiGame {
                 this.save.stats.happiness = Math.min(100, this.save.stats.happiness + 15);
                 this.showNotification(`Discovered ${poi.name}! +20 💖`);
                 this.sound.play('achievement');
+                
+                // Unlock fast travel location
+                const unlockedLocation = this.fastTravel.unlockLocation(poi.id);
+                if (unlockedLocation) {
+                    this.showNotification(`Fast travel unlocked: ${unlockedLocation}! 🚇`);
+                }
                 
                 // Check if all POIs visited
                 if (this.save.map.visitedPOIs.length === MAP_POIS.length && 

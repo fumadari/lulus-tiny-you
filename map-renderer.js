@@ -335,7 +335,7 @@ class MapRenderer {
         }
     }
     
-    render(ctx, playerX, playerY) {
+    render(ctx, playerX, playerY, camera, mapData) {
         // Clear and set up
         ctx.fillStyle = this.getSkyColor();
         ctx.fillRect(0, 0, 360, 420);
@@ -343,10 +343,16 @@ class MapRenderer {
         // Draw clouds
         this.renderClouds(ctx);
         
-        // Draw map tiles
-        for (let y = 0; y < 15; y++) {
-            for (let x = 0; x < 15; x++) {
-                this.renderTile(ctx, x, y, NYC_MAP[y][x]);
+        // Get visible tile range from camera
+        const range = camera ? camera.getVisibleTileRange() : 
+                      { startX: 0, endX: 15, startY: 0, endY: 15 };
+        
+        // Draw only visible map tiles
+        for (let y = range.startY; y < range.endY; y++) {
+            for (let x = range.startX; x < range.endX; x++) {
+                if (mapData[y] && mapData[y][x] !== undefined) {
+                    this.renderTile(ctx, x, y, mapData[y][x], camera);
+                }
             }
         }
         
@@ -380,9 +386,18 @@ class MapRenderer {
         }
     }
     
-    renderTile(ctx, x, y, tileType) {
-        const screenX = x * this.tileSize;
-        const screenY = y * this.tileSize + 40; // Offset for HUD
+    renderTile(ctx, x, y, tileType, camera) {
+        let screenX = x * this.tileSize;
+        let screenY = y * this.tileSize;
+        
+        // Apply camera offset if available
+        if (camera) {
+            const screenPos = camera.worldToScreen(screenX, screenY);
+            screenX = screenPos.x;
+            screenY = screenPos.y;
+        } else {
+            screenY += 40; // Offset for HUD when no camera
+        }
         
         switch(tileType) {
             case 0: // Grass
