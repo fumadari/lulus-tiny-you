@@ -1,0 +1,38 @@
+{
+  "name": "lulus-tiny-you",
+  "version": "2.0.0",
+  "description": "A romantic Tamagotchi-style game for Lulu - Take care of your adorable pocket Dario!",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1",
+    "dev": "npx http-server -p 8080 -c-1 --cors",
+    "build": "echo 'No build step required for static files'",
+    "test": "echo 'No tests configured yet'"
+  },
+  "keywords": [
+    "tamagotchi",
+    "virtual-pet",
+    "game",
+    "pwa",
+    "romantic",
+    "pixel-art",
+    "javascript",
+    "html5-canvas"
+  ],
+  "author": "Dario Fumarola",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fumadari/lulus-tiny-you"
+  },
+  "bugs": {
+    "url": "https://github.com/fumadari/lulus-tiny-you/issues"
+  },
+  "homepage": "https://github.com/fumadari/lulus-tiny-you#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
