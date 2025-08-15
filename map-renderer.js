@@ -357,18 +357,42 @@ class MapRenderer {
     }
     
     initializeAnimatedElements() {
-        // Add some vehicles on roads
-        for (let y = 0; y < 15; y++) {
-            for (let x = 0; x < 15; x++) {
-                if (NYC_MAP[y][x] === 1 && Math.random() < 0.1) { // Road tile
-                    this.vehicles.push({
-                        x: x * this.tileSize,
-                        y: y * this.tileSize,
-                        speed: 0.5 + Math.random() * 0.5,
-                        direction: Math.random() > 0.5 ? 1 : -1,
-                        color: ['#ff0000', '#0000ff', '#ffff00', '#00ff00'][Math.floor(Math.random() * 4)],
-                        type: Math.random() > 0.7 ? 'taxi' : 'car'
-                    });
+        // Clear existing vehicles to prevent duplicates
+        this.vehicles = [];
+        
+        // Add vehicles only on valid road tiles
+        // Check the actual map data, not a fixed 15x15 grid
+        if (window.NYC_MAP_LARGE) {
+            const mapData = window.NYC_MAP_LARGE;
+            // Sample some roads to add vehicles, but not too many
+            for (let y = 0; y < MAP_HEIGHT; y += 3) {
+                for (let x = 0; x < MAP_WIDTH; x += 3) {
+                    if (mapData[y] && mapData[y][x] === 1 && Math.random() < 0.05) { // Road tile
+                        // Check that adjacent tiles aren't water
+                        let validRoad = true;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (mapData[y + dy] && mapData[y + dy][x + dx] === 3) {
+                                    validRoad = false;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (validRoad) {
+                            this.vehicles.push({
+                                x: x * this.tileSize,
+                                y: y * this.tileSize,
+                                tileX: x,
+                                tileY: y,
+                                speed: 0.3 + Math.random() * 0.3,
+                                direction: Math.random() > 0.5 ? 1 : -1,
+                                color: ['#ffeb3b', '#ff0000', '#0000ff', '#00ff00'][Math.floor(Math.random() * 4)],
+                                type: Math.random() > 0.6 ? 'taxi' : 'car',
+                                isVertical: Math.random() > 0.5
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -398,13 +422,34 @@ class MapRenderer {
     update(deltaTime) {
         this.animationTime += deltaTime;
         
-        // Update vehicles
+        // Update vehicles with road constraints
         this.vehicles.forEach(vehicle => {
-            vehicle.x += vehicle.speed * vehicle.direction;
-            
-            // Wrap around
-            if (vehicle.x > 360) vehicle.x = -20;
-            if (vehicle.x < -20) vehicle.x = 360;
+            if (window.NYC_MAP_LARGE) {
+                const mapData = window.NYC_MAP_LARGE;
+                
+                // Move vehicle along road
+                if (vehicle.isVertical) {
+                    vehicle.y += vehicle.speed * vehicle.direction;
+                    const newTileY = Math.floor(vehicle.y / this.tileSize);
+                    
+                    // Check if still on road, reverse if not
+                    if (newTileY < 0 || newTileY >= MAP_HEIGHT || 
+                        !mapData[newTileY] || mapData[newTileY][vehicle.tileX] !== 1) {
+                        vehicle.direction *= -1;
+                        vehicle.y += vehicle.speed * vehicle.direction * 2;
+                    }
+                } else {
+                    vehicle.x += vehicle.speed * vehicle.direction;
+                    const newTileX = Math.floor(vehicle.x / this.tileSize);
+                    
+                    // Check if still on road, reverse if not
+                    if (newTileX < 0 || newTileX >= MAP_WIDTH || 
+                        !mapData[vehicle.tileY] || mapData[vehicle.tileY][newTileX] !== 1) {
+                        vehicle.direction *= -1;
+                        vehicle.x += vehicle.speed * vehicle.direction * 2;
+                    }
+                }
+            }
         });
         
         // Update birds
@@ -474,11 +519,11 @@ class MapRenderer {
         this.renderLandmarks(ctx);
         
         // Draw animated elements
-        this.renderVehicles(ctx);
+        this.renderVehicles(ctx, camera);
         this.renderBirds(ctx);
         
-        // Draw player character
-        this.renderPlayer(ctx, playerX, playerY);
+        // Draw player character (pass camera for proper positioning)
+        this.renderPlayer(ctx, playerX, playerY, camera);
         
         // Apply lighting overlay
         this.renderLighting(ctx);
@@ -678,30 +723,63 @@ class MapRenderer {
         });
     }
     
-    renderVehicles(ctx) {
+    renderVehicles(ctx, camera) {
         this.vehicles.forEach(vehicle => {
-            const y = vehicle.y + 40;
+            // Check if vehicle is visible
+            if (camera && !camera.isTileVisible(Math.floor(vehicle.x / this.tileSize), 
+                                                Math.floor(vehicle.y / this.tileSize))) {
+                return;
+            }
+            
+            let x = vehicle.x;
+            let y = vehicle.y;
+            
+            if (camera) {
+                const screenPos = camera.worldToScreen(x, y);
+                x = screenPos.x;
+                y = screenPos.y;
+            } else {
+                y += 40;
+            }
+            
+            // Don't render if off screen
+            if (x < -20 || x > 380 || y < -20 || y > 440) return;
             
             if (vehicle.type === 'taxi') {
                 // Taxi body
                 ctx.fillStyle = '#ffd700';
-                ctx.fillRect(vehicle.x, y + 6, 16, 8);
+                ctx.fillRect(x, y + 6, 16, 8);
                 
                 // Taxi sign
                 ctx.fillStyle = '#000';
-                ctx.fillRect(vehicle.x + 6, y + 4, 4, 2);
+                ctx.fillRect(x + 6, y + 4, 4, 2);
+                
+                // "TAXI" text
+                ctx.fillStyle = '#000';
+                ctx.font = '4px sans-serif';
+                ctx.fillText('TAXI', x + 2, y + 11);
             } else {
                 // Regular car
                 ctx.fillStyle = vehicle.color;
-                ctx.fillRect(vehicle.x, y + 8, 12, 6);
+                ctx.fillRect(x, y + 8, 12, 6);
             }
             
             // Wheels
             ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.arc(vehicle.x + 3, y + 14, 2, 0, Math.PI * 2);
-            ctx.arc(vehicle.x + 9, y + 14, 2, 0, Math.PI * 2);
+            ctx.arc(x + 3, y + 14, 2, 0, Math.PI * 2);
+            ctx.arc(x + 9, y + 14, 2, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Headlights
+            if (this.timeOfDay === 'night' || this.timeOfDay === 'sunset') {
+                ctx.fillStyle = 'rgba(255, 255, 200, 0.5)';
+                if (vehicle.direction > 0) {
+                    ctx.fillRect(x + 12, y + 9, 8, 4);
+                } else {
+                    ctx.fillRect(x - 8, y + 9, 8, 4);
+                }
+            }
         });
     }
     
@@ -750,50 +828,89 @@ class MapRenderer {
         });
     }
     
-    renderPlayer(ctx, playerX, playerY) {
-        const x = playerX * this.tileSize + this.tileSize / 2;
-        const y = playerY * this.tileSize + 40 + this.tileSize / 2;
+    renderPlayer(ctx, playerX, playerY, camera) {
+        // Calculate screen position with camera
+        let x = playerX * this.tileSize + this.tileSize / 2;
+        let y = playerY * this.tileSize + this.tileSize / 2;
+        
+        if (camera) {
+            const screenPos = camera.worldToScreen(x, y);
+            x = screenPos.x;
+            y = screenPos.y;
+        } else {
+            y += 40; // HUD offset
+        }
+        
+        // Draw a glowing outline to make character more visible
+        ctx.save();
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(x, y - 5, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         
         // Player shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
-        ctx.ellipse(x, y + 8, 6, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 10, 8, 4, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Player body with animation
         const bounce = Math.sin(this.animationTime * 5) * 2;
         
-        // Body
+        // Body (larger and more visible)
         ctx.fillStyle = '#ff70a6';
-        ctx.fillRect(x - 6, y - 8 + bounce, 12, 12);
+        ctx.fillRect(x - 8, y - 6 + bounce, 16, 14);
         
-        // Head
+        // Body outline
+        ctx.strokeStyle = '#d1005d';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 8, y - 6 + bounce, 16, 14);
+        
+        // Head (larger)
         ctx.fillStyle = '#fdbcb4';
         ctx.beginPath();
-        ctx.arc(x, y - 12 + bounce, 6, 0, Math.PI * 2);
+        ctx.arc(x, y - 12 + bounce, 8, 0, Math.PI * 2);
         ctx.fill();
         
-        // Eyes
+        // Head outline
+        ctx.strokeStyle = '#e5a09a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y - 12 + bounce, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Eyes (bigger and more visible)
         ctx.fillStyle = '#000';
-        ctx.fillRect(x - 3, y - 14 + bounce, 2, 2);
-        ctx.fillRect(x + 1, y - 14 + bounce, 2, 2);
+        ctx.fillRect(x - 4, y - 14 + bounce, 3, 3);
+        ctx.fillRect(x + 1, y - 14 + bounce, 3, 3);
         
         // Smile
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(x, y - 10 + bounce, 2, 0, Math.PI);
+        ctx.arc(x, y - 9 + bounce, 3, 0, Math.PI);
         ctx.stroke();
         
         // Hair
         ctx.fillStyle = '#8b4513';
-        ctx.fillRect(x - 6, y - 18 + bounce, 12, 4);
+        ctx.fillRect(x - 8, y - 20 + bounce, 16, 5);
+        
+        // Name tag above player
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x - 20, y - 35 + bounce, 40, 12);
+        ctx.fillStyle = '#fff';
+        ctx.font = '8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Dario', x, y - 26 + bounce);
         
         // Heart above player (if happy)
-        if (this.game.save.stats.happiness > 80) {
+        if (this.game && this.game.save.stats.happiness > 80) {
             ctx.fillStyle = '#ff1493';
-            ctx.font = '12px sans-serif';
-            ctx.fillText('💕', x - 8, y - 22 + bounce);
+            ctx.font = '14px sans-serif';
+            ctx.fillText('💕', x, y - 40 + bounce);
         }
     }
     

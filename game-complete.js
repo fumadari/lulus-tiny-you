@@ -98,6 +98,9 @@ class TamagotchiGame {
         // Initialize fast travel
         this.fastTravel = new FastTravelSystem(this);
         
+        // Initialize Lulu interaction system
+        this.luluInteraction = new LuluInteraction(this);
+        
         // Sprite state
         this.sprite = {
             x: 180,
@@ -735,6 +738,12 @@ class TamagotchiGame {
         );
         
         if (poi) {
+            // Special interaction for Lulu's place
+            if (poi.id === 'lulu_home') {
+                this.luluInteraction.startVisit();
+                return;
+            }
+            
             if (!this.save.map.visitedPOIs.includes(poi.id)) {
                 this.save.map.visitedPOIs.push(poi.id);
                 this.save.currency.hearts += 20;
