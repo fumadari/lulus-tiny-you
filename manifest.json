@@ -1,0 +1,27 @@
+{
+  "name": "Lulu's Tiny You - Pocket Dario Tamagotchi",
+  "short_name": "Tiny You",
+  "description": "Take care of your adorable pocket Dario in this Tamagotchi-style game made with love for Lulu!",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ff70a6",
+  "theme_color": "#ff70a6",
+  "orientation": "portrait",
+  "scope": "./",
+  "lang": "en",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
