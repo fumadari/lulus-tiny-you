@@ -1,23 +1,23 @@
-// Expanded NYC Map Data - Manhattan & Brooklyn
-// Map size: 60x80 tiles (much larger!)
+// Expanded NYC Map Data - Citywide
+// Map size: 100x90 tiles covering Manhattan, Brooklyn, Queens and the Bronx
 // Tile types:
 // 0 = grass/park, 1 = road, 2 = building, 3 = water, 4 = park path, 5 = bridge
 // 6 = subway entrance, 7 = plaza, 8 = residential building, 9 = commercial building
 
-const MAP_WIDTH = 60;
-const MAP_HEIGHT = 80;
+const MAP_WIDTH = 100;
+const MAP_HEIGHT = 90;
 
 // Generate realistic NYC map procedurally
 function generateNYCMap() {
     const map = [];
-    
+
     // Initialize with water (East River and Hudson River)
     for (let y = 0; y < MAP_HEIGHT; y++) {
         map[y] = [];
         for (let x = 0; x < MAP_WIDTH; x++) {
             // Hudson River on the left (x < 8)
             // East River in the middle (x between 35-42)
-            // Brooklyn on the right (x > 42)
+            // Land elsewhere
             if (x < 8 || (x >= 35 && x < 42)) {
                 map[y][x] = 3; // Water
             } else {
@@ -25,10 +25,21 @@ function generateNYCMap() {
             }
         }
     }
-    
+
+    // Create Bronx grid (north of Manhattan)
+    for (let y = 0; y < 10; y++) {
+        for (let x = 8; x < 35; x++) {
+            if ((x - 8) % 5 === 0 || y % 4 === 0) {
+                map[y][x] = 1; // Road
+            } else {
+                map[y][x] = 8; // Mostly residential
+            }
+        }
+    }
+
     // Create Manhattan grid (Avenues and Streets)
-    // Manhattan area: x from 8 to 35
-    for (let y = 0; y < MAP_HEIGHT; y++) {
+    // Manhattan area: x from 8 to 35, y from 10 to 80
+    for (let y = 10; y < 80; y++) {
         for (let x = 8; x < 35; x++) {
             // Avenues (vertical roads) - every 4 tiles
             if ((x - 8) % 4 === 0) {
@@ -54,10 +65,10 @@ function generateNYCMap() {
             }
         }
     }
-    
+
     // Create Brooklyn grid (less dense)
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-        for (let x = 42; x < MAP_WIDTH; x++) {
+    for (let y = 0; y < 80; y++) {
+        for (let x = 42; x < 70; x++) {
             // Streets in Brooklyn - more organic layout
             if ((x - 42) % 5 === 0 || y % 4 === 0) {
                 map[y][x] = 1; // Road
@@ -67,7 +78,19 @@ function generateNYCMap() {
             }
         }
     }
-    
+
+    // Create Queens grid
+    for (let y = 0; y < 80; y++) {
+        for (let x = 70; x < MAP_WIDTH; x++) {
+            if ((x - 70) % 6 === 0 || y % 5 === 0) {
+                map[y][x] = 1; // Road
+            } else {
+                // Mix of residential and commercial
+                map[y][x] = Math.random() > 0.3 ? 8 : 9;
+            }
+        }
+    }
+
     // Add Central Park (Manhattan)
     for (let y = 10; y < 25; y++) {
         for (let x = 16; x < 28; x++) {
@@ -78,7 +101,7 @@ function generateNYCMap() {
             }
         }
     }
-    
+
     // Add Upper East Side details (your area) - around x:24-30, y:12-20
     for (let y = 12; y < 20; y++) {
         for (let x = 24; x < 30; x++) {
@@ -89,7 +112,7 @@ function generateNYCMap() {
             }
         }
     }
-    
+
     // Add Williamsburg (Lulu's area) - around x:43-52, y:35-45
     for (let y = 35; y < 45; y++) {
         for (let x = 43; x < 52; x++) {
@@ -102,33 +125,43 @@ function generateNYCMap() {
             }
         }
     }
-    
+
+    // Add Flushing Meadows Park in Queens
+    for (let y = 45; y < 60; y++) {
+        for (let x = 82; x < 92; x++) {
+            if (x === 82 || x === 91 || y === 45 || y === 59) {
+                map[y][x] = 4; // Park path
+            } else {
+                map[y][x] = 0; // Grass
+            }
+        }
+    }
+
     // Add bridges
     // Brooklyn Bridge
     for (let x = 35; x < 42; x++) {
         map[50][x] = 5; // Bridge
         map[51][x] = 5;
     }
-    
+
     // Manhattan Bridge
     for (let x = 35; x < 42; x++) {
         map[45][x] = 5;
         map[46][x] = 5;
     }
-    
+
     // Williamsburg Bridge
     for (let x = 35; x < 42; x++) {
         map[40][x] = 5;
         map[41][x] = 5;
     }
-    
-    // Add Times Square area (plaza)
-    for (let y = 30; y < 34; y++) {
-        for (let x = 20; x < 24; x++) {
-            map[y][x] = 7; // Plaza
-        }
+
+    // Queensboro Bridge
+    for (let x = 35; x < 42; x++) {
+        map[30][x] = 5;
+        map[31][x] = 5;
     }
-    
+
     // Add subway entrances at major intersections
     const subwayLocations = [
         {x: 12, y: 15}, // Upper West Side
@@ -138,14 +171,19 @@ function generateNYCMap() {
         {x: 25, y: 55}, // Downtown
         {x: 45, y: 40}, // Williamsburg (Lulu's station)
         {x: 48, y: 50}, // Brooklyn Downtown
+        {x: 20, y: 5},  // Yankee Stadium
+        {x: 30, y: 7},  // Bronx Zoo
+        {x: 75, y: 35}, // Astoria
+        {x: 85, y: 50}, // Flushing Meadows
+        {x: 90, y: 70}, // JFK Airport
     ];
-    
+
     subwayLocations.forEach(loc => {
         if (loc.x < MAP_WIDTH && loc.y < MAP_HEIGHT) {
             map[loc.y][loc.x] = 6; // Subway entrance
         }
     });
-    
+
     return map;
 }
 
@@ -167,7 +205,7 @@ const MAP_POIS_LARGE = [
     { name: "Battery Park", x: 18, y: 72, emoji: "🗽", id: "battery_park", description: "Statue of Liberty views" },
     { name: "High Line", x: 16, y: 40, emoji: "🌿", id: "high_line", description: "Elevated park" },
     { name: "Grand Central", x: 24, y: 33, emoji: "🚉", id: "grand_central", description: "Historic train station" },
-    
+
     // Brooklyn POIs
     { name: "Lulu's Place", x: 47, y: 40, emoji: "💕", id: "lulu_home", description: "Lulu's Williamsburg apartment" },
     { name: "Brooklyn Bridge", x: 38, y: 50, emoji: "🌉", id: "brooklyn_bridge", description: "Iconic bridge" },
@@ -177,7 +215,17 @@ const MAP_POIS_LARGE = [
     { name: "Williamsburg", x: 45, y: 38, emoji: "🎭", id: "williamsburg", description: "Hip neighborhood" },
     { name: "Brooklyn Museum", x: 48, y: 53, emoji: "🖼️", id: "brooklyn_museum", description: "Art and culture" },
     { name: "Smorgasburg", x: 46, y: 42, emoji: "🍔", id: "smorgasburg", description: "Food market" },
-    
+
+    // Queens POIs
+    { name: "Astoria", x: 75, y: 35, emoji: "🎬", id: "astoria", description: "Queens neighborhood" },
+    { name: "Flushing Meadows", x: 85, y: 50, emoji: "🎾", id: "flushing", description: "Tennis center and park" },
+    { name: "LaGuardia Airport", x: 80, y: 25, emoji: "🛫", id: "laguardia", description: "Queens airport" },
+    { name: "JFK Airport", x: 90, y: 70, emoji: "✈️", id: "jfk", description: "Major international airport" },
+
+    // Bronx POIs
+    { name: "Yankee Stadium", x: 20, y: 5, emoji: "⚾", id: "yankee", description: "Home of the Yankees" },
+    { name: "Bronx Zoo", x: 30, y: 7, emoji: "🦁", id: "bronx_zoo", description: "Famous zoo" },
+
     // Special romantic spots
     { name: "Our First Date", x: 22, y: 47, emoji: "💝", id: "first_date", description: "Where we first met" },
     { name: "Favorite Cafe", x: 46, y: 39, emoji: "☕", id: "fav_cafe", description: "Our morning coffee spot" },
@@ -200,7 +248,7 @@ const NEIGHBORHOODS = {
     "20,55": "Tribeca",
     "24,55": "Lower East Side",
     "20,65": "Financial District",
-    
+
     // Brooklyn
     "45,38": "Williamsburg",
     "43,48": "DUMBO",
@@ -209,6 +257,15 @@ const NEIGHBORHOODS = {
     "45,60": "Sunset Park",
     "50,65": "Bay Ridge",
     "45,75": "Coney Island",
+
+    // Queens
+    "75,35": "Astoria",
+    "85,50": "Flushing",
+    "90,70": "JFK Airport",
+
+    // Bronx
+    "20,5": "Bronx",
+    "30,7": "Bronx",
 };
 
 // Subway lines connecting different areas
@@ -223,7 +280,7 @@ const SUBWAY_LINES = [
         ]
     },
     {
-        name: "L Line", 
+        name: "L Line",
         color: "#A7A9AC",
         stops: [
             {x: 21, y: 42}, // Union Square
@@ -232,11 +289,29 @@ const SUBWAY_LINES = [
     },
     {
         name: "N/Q/R/W",
-        color: "#FCCC0A", 
+        color: "#FCCC0A",
         stops: [
             {x: 22, y: 32}, // Times Square
             {x: 21, y: 42}, // Union Square
             {x: 43, y: 48}, // Brooklyn
+        ]
+    },
+    {
+        name: "7 Line",
+        color: "#B933AD",
+        stops: [
+            {x: 21, y: 42}, // Union Square
+            {x: 75, y: 35}, // Astoria
+            {x: 85, y: 50}, // Flushing Meadows
+        ]
+    },
+    {
+        name: "D Line",
+        color: "#FF6319",
+        stops: [
+            {x: 20, y: 5}, // Yankee Stadium
+            {x: 22, y: 32}, // Times Square
+            {x: 20, y: 65}, // Downtown Manhattan
         ]
     }
 ];
@@ -248,3 +323,4 @@ window.NEIGHBORHOODS = NEIGHBORHOODS;
 window.SUBWAY_LINES = SUBWAY_LINES;
 window.MAP_WIDTH = MAP_WIDTH;
 window.MAP_HEIGHT = MAP_HEIGHT;
+

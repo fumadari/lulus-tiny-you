@@ -31,7 +31,11 @@ class MapRenderer {
             water: this.createWaterPattern(),
             building: this.createBuildingPattern(),
             park: this.createParkPattern(),
-            bridge: this.createBridgePattern()
+            bridge: this.createBridgePattern(),
+            plaza: this.createPlazaPattern(),
+            subway: this.createSubwayPattern(),
+            residential: this.createResidentialPattern(),
+            commercial: this.createCommercialPattern()
         };
     }
     
@@ -241,6 +245,116 @@ class MapRenderer {
         
         return canvas;
     }
+
+    createPlazaPattern() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.tileSize;
+        canvas.height = this.tileSize;
+        const ctx = canvas.getContext('2d');
+
+        // Stone base
+        ctx.fillStyle = '#b0b0b0';
+        ctx.fillRect(0, 0, this.tileSize, this.tileSize);
+
+        // Plaza tiles
+        ctx.strokeStyle = '#9a9a9a';
+        for (let x = 0; x <= this.tileSize; x += 6) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, this.tileSize);
+            ctx.stroke();
+        }
+        for (let y = 0; y <= this.tileSize; y += 6) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(this.tileSize, y);
+            ctx.stroke();
+        }
+
+        return canvas;
+    }
+
+    createSubwayPattern() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.tileSize;
+        canvas.height = this.tileSize;
+        const ctx = canvas.getContext('2d');
+
+        // Base sidewalk
+        ctx.fillStyle = '#666666';
+        ctx.fillRect(0, 0, this.tileSize, this.tileSize);
+
+        // Subway "M"
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('M', this.tileSize / 2, this.tileSize / 2 + 1);
+
+        return canvas;
+    }
+
+    createResidentialPattern() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.tileSize;
+        canvas.height = this.tileSize;
+        const ctx = canvas.getContext('2d');
+
+        // Base color
+        const gradient = ctx.createLinearGradient(0, 0, 0, this.tileSize);
+        gradient.addColorStop(0, '#9d9d9d');
+        gradient.addColorStop(1, '#7d7d7d');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.tileSize, this.tileSize);
+
+        // Windows
+        ctx.fillStyle = '#ffe082';
+        const windowSize = 3;
+        const spacing = 6;
+        for (let x = 3; x < this.tileSize - 3; x += spacing) {
+            for (let y = 3; y < this.tileSize - 3; y += spacing) {
+                ctx.fillRect(x, y, windowSize, windowSize);
+            }
+        }
+
+        ctx.strokeStyle = '#bdbdbd';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, this.tileSize, this.tileSize);
+
+        return canvas;
+    }
+
+    createCommercialPattern() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.tileSize;
+        canvas.height = this.tileSize;
+        const ctx = canvas.getContext('2d');
+
+        // Base color
+        const gradient = ctx.createLinearGradient(0, 0, 0, this.tileSize);
+        gradient.addColorStop(0, '#6a6a6a');
+        gradient.addColorStop(1, '#4a4a4a');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.tileSize, this.tileSize);
+
+        // Windows
+        ctx.fillStyle = '#9ad1ff';
+        const windowSize = 3;
+        const spacing = 6;
+        for (let x = 3; x < this.tileSize - 3; x += spacing) {
+            for (let y = 3; y < this.tileSize - 3; y += spacing) {
+                if (Math.random() > 0.2) {
+                    ctx.fillRect(x, y, windowSize, windowSize);
+                }
+            }
+        }
+
+        ctx.strokeStyle = '#8a8a8a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, this.tileSize, this.tileSize);
+
+        return canvas;
+    }
     
     initializeAnimatedElements() {
         // Add some vehicles on roads
@@ -445,6 +559,22 @@ class MapRenderer {
                 
             case 5: // Bridge
                 ctx.drawImage(this.patterns.bridge, screenX, screenY);
+                break;
+
+            case 6: // Subway entrance
+                ctx.drawImage(this.patterns.subway, screenX, screenY);
+                break;
+
+            case 7: // Plaza
+                ctx.drawImage(this.patterns.plaza, screenX, screenY);
+                break;
+
+            case 8: // Residential building
+                ctx.drawImage(this.patterns.residential, screenX, screenY);
+                break;
+
+            case 9: // Commercial building
+                ctx.drawImage(this.patterns.commercial, screenX, screenY);
                 break;
         }
     }
@@ -736,6 +866,10 @@ class MapRenderer {
                     case 3: ctx.fillStyle = '#2c5f7c'; break; // Water
                     case 4: ctx.fillStyle = '#5a8c5e'; break; // Park
                     case 5: ctx.fillStyle = '#8b7766'; break; // Bridge
+                    case 6: ctx.fillStyle = '#0000ff'; break; // Subway
+                    case 7: ctx.fillStyle = '#b0b0b0'; break; // Plaza
+                    case 8: ctx.fillStyle = '#9d9d9d'; break; // Residential
+                    case 9: ctx.fillStyle = '#555555'; break; // Commercial
                 }
                 
                 ctx.fillRect(minimapX + x * tileSize, minimapY + y * tileSize, tileSize, tileSize);
@@ -771,3 +905,4 @@ class MapRenderer {
 
 // Export for use in game
 window.MapRenderer = MapRenderer;
+
