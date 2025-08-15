@@ -115,6 +115,9 @@ class TamagotchiGame {
         // Initialize sound system
         this.sound = new SoundSystem();
         
+        // Initialize map renderer
+        this.mapRenderer = new MapRenderer(this);
+        
         // Sprite state
         this.sprite = {
             x: 180,
@@ -364,6 +367,11 @@ class TamagotchiGame {
             this.updateMinigame(deltaTime);
         }
         
+        // Update map renderer
+        if (this.currentScreen === 'map' && this.mapRenderer) {
+            this.mapRenderer.update(deltaTime);
+        }
+        
         // Check for ring event
         if (this.save.tokens >= 5 && !this.save.inventory.includes('Ring')) {
             this.triggerRingEvent();
@@ -601,116 +609,21 @@ class TamagotchiGame {
     // ===== MAP SCREEN =====
     
     renderMap() {
-        // Draw map tiles
-        for (let y = 0; y < MAP_HEIGHT; y++) {
-            for (let x = 0; x < MAP_WIDTH; x++) {
-                const tile = NYC_MAP[y][x];
-                const dx = x * TILE_SIZE;
-                const dy = y * TILE_SIZE + 40; // Offset for HUD
-                
-                // Base tile
-                switch(tile) {
-                    case 0: // Grass
-                        this.ctx.fillStyle = '#8FBC8F';
-                        break;
-                    case 1: // Road
-                        this.ctx.fillStyle = '#696969';
-                        break;
-                    case 2: // Building
-                        this.ctx.fillStyle = '#4A4A4A';
-                        break;
-                    case 3: // Water
-                        this.ctx.fillStyle = '#4682B4';
-                        break;
-                    case 4: // Park
-                        this.ctx.fillStyle = '#228B22';
-                        break;
-                    case 5: // Bridge
-                        this.ctx.fillStyle = '#8B7355';
-                        break;
-                }
-                
-                this.ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE);
-                
-                // Tile details
-                if (tile === 1) { // Road lines
-                    this.ctx.strokeStyle = '#FFD700';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.setLineDash([4, 4]);
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(dx + TILE_SIZE/2, dy);
-                    this.ctx.lineTo(dx + TILE_SIZE/2, dy + TILE_SIZE);
-                    this.ctx.stroke();
-                    this.ctx.setLineDash([]);
-                } else if (tile === 2) { // Building windows
-                    this.ctx.fillStyle = '#FFD700';
-                    for (let wy = 4; wy < TILE_SIZE - 4; wy += 8) {
-                        for (let wx = 4; wx < TILE_SIZE - 4; wx += 8) {
-                            if (Math.random() > 0.3) {
-                                this.ctx.fillRect(dx + wx, dy + wy, 4, 4);
-                            }
-                        }
-                    }
-                } else if (tile === 4) { // Park trees
-                    this.ctx.fillStyle = '#0F5F0F';
-                    this.ctx.fillRect(dx + 8, dy + 8, 8, 8);
-                    this.ctx.fillStyle = '#654321';
-                    this.ctx.fillRect(dx + 10, dy + 14, 4, 6);
-                } else if (tile === 3) { // Water animation
-                    const wave = Math.sin((x + y + this.frameCount * 0.05)) * 2;
-                    this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    this.ctx.fillRect(dx, dy + 10 + wave, TILE_SIZE, 2);
-                }
-            }
+        // Use enhanced map renderer
+        if (this.mapRenderer) {
+            this.mapRenderer.render(this.ctx, this.save.player.x, this.save.player.y);
+            
+            // Map HUD overlay
+            this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            this.ctx.fillRect(0, 0, CANVAS_WIDTH, 40);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = '10px monospace';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText('🗽 NYC Map - Use WASD/Arrows to move', 10, 15);
+            this.ctx.fillText(`📍 Location: (${this.save.player.x}, ${this.save.player.y})`, 10, 28);
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText('Press SPACE at POIs', CANVAS_WIDTH - 10, 28);
         }
-        
-        // Draw POIs
-        MAP_POIS.forEach(poi => {
-            const visited = this.save.map.visitedPOIs.includes(poi.id);
-            const dx = poi.x * TILE_SIZE + TILE_SIZE/2;
-            const dy = poi.y * TILE_SIZE + 40 + TILE_SIZE/2;
-            
-            // POI marker
-            this.ctx.fillStyle = visited ? '#90EE90' : '#FFD700';
-            this.ctx.strokeStyle = '#333';
-            this.ctx.lineWidth = 2;
-            this.ctx.beginPath();
-            this.ctx.arc(dx, dy, 12, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
-            
-            // POI icon
-            this.ctx.font = '16px serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(poi.emoji, dx, dy);
-            
-            // Hover effect
-            const playerDist = Math.abs(this.save.player.x - poi.x) + Math.abs(this.save.player.y - poi.y);
-            if (playerDist <= 1) {
-                this.ctx.fillStyle = 'rgba(255,255,255,0.9)';
-                this.ctx.fillRect(dx - 40, dy - 35, 80, 20);
-                this.ctx.fillStyle = '#333';
-                this.ctx.font = '8px monospace';
-                this.ctx.fillText(poi.name, dx, dy - 25);
-            }
-        });
-        
-        // Draw player
-        const px = this.save.player.x * TILE_SIZE + TILE_SIZE/2;
-        const py = this.save.player.y * TILE_SIZE + 40 + TILE_SIZE/2;
-        this.drawCharacter(px, py - 10, 0.8);
-        
-        // Map HUD
-        this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        this.ctx.fillRect(0, 0, CANVAS_WIDTH, 40);
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '10px monospace';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText('🗽 NYC Map - Use WASD/Arrows to move', 10, 15);
-        this.ctx.fillText(`📍 Location: (${this.save.player.x}, ${this.save.player.y})`, 10, 28);
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText('Press SPACE at POIs', CANVAS_WIDTH - 10, 28);
     }
 
     movePlayer(dx, dy) {
