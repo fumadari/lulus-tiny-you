@@ -3,8 +3,8 @@
 // ============================================
 
 const SAVE_KEY = 'lulu-tiny-you-v5'; // New version for larger map
-const CANVAS_WIDTH = 450;
-const CANVAS_HEIGHT = 500;
+const CANVAS_WIDTH = 360;
+const CANVAS_HEIGHT = 420;
 const TILE_SIZE = 24;
 // MAP_WIDTH and MAP_HEIGHT are now defined in nyc-map-data.js
 
@@ -2029,52 +2029,6 @@ class TamagotchiGame {
         }
     }
 
-    renderMobileControls() {
-        // D-pad for mobile movement
-        const dpadSize = 30;
-        const dpadX = 20;
-        const dpadY = CANVAS_HEIGHT - 140;
-        
-        // D-pad background
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.fillRect(dpadX, dpadY, dpadSize * 3, dpadSize * 3);
-        
-        // Up button
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(dpadX + dpadSize, dpadY, dpadSize, dpadSize);
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '16px serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText('↑', dpadX + dpadSize * 1.5, dpadY + dpadSize * 0.5);
-        
-        // Down button
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(dpadX + dpadSize, dpadY + dpadSize * 2, dpadSize, dpadSize);
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText('↓', dpadX + dpadSize * 1.5, dpadY + dpadSize * 2.5);
-        
-        // Left button
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(dpadX, dpadY + dpadSize, dpadSize, dpadSize);
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText('←', dpadX + dpadSize * 0.5, dpadY + dpadSize * 1.5);
-        
-        // Right button
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(dpadX + dpadSize * 2, dpadY + dpadSize, dpadSize, dpadSize);
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText('→', dpadX + dpadSize * 2.5, dpadY + dpadSize * 1.5);
-        
-        // Store d-pad bounds for click detection
-        this.dpadBounds = {
-            up: {x: dpadX + dpadSize, y: dpadY, w: dpadSize, h: dpadSize},
-            down: {x: dpadX + dpadSize, y: dpadY + dpadSize * 2, w: dpadSize, h: dpadSize},
-            left: {x: dpadX, y: dpadY + dpadSize, w: dpadSize, h: dpadSize},
-            right: {x: dpadX + dpadSize * 2, y: dpadY + dpadSize, w: dpadSize, h: dpadSize}
-        };
-    }
-    
     renderInteractButton() {
         // Check if there's something to interact with
         const poi = MAP_POIS.find(p => 
@@ -2125,62 +2079,90 @@ class TamagotchiGame {
         overlay.style.left = '0';
         overlay.style.right = '0';
         overlay.style.bottom = '0';
-        overlay.style.background = 'rgba(0,0,0,0.9)';
+        overlay.style.background = 'linear-gradient(135deg, #ff70a6 0%, #ff9a9e 50%, #fecfef 100%)';
         overlay.style.zIndex = '1000';
         overlay.style.display = 'flex';
         overlay.style.flexDirection = 'column';
         overlay.style.justifyContent = 'center';
         overlay.style.alignItems = 'center';
+        overlay.style.padding = '20px';
+        
+        // Title
+        const title = document.createElement('div');
+        title.innerHTML = '📸 Selfie Time with Tiny Dario! 📸';
+        title.style.color = 'white';
+        title.style.fontSize = '18px';
+        title.style.fontFamily = 'Press Start 2P, monospace';
+        title.style.marginBottom = '20px';
+        title.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+        overlay.appendChild(title);
+        
+        // Container for video and canvas
+        const container = document.createElement('div');
+        container.style.position = 'relative';
+        container.style.width = '300px';
+        container.style.height = '300px';
+        container.style.borderRadius = '20px';
+        container.style.overflow = 'hidden';
+        container.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+        container.style.border = '5px solid white';
+        overlay.appendChild(container);
         
         // Video element
         const video = document.createElement('video');
         video.autoplay = true;
         video.playsInline = true;
-        video.style.width = '300px';
-        video.style.height = '300px';
-        video.style.borderRadius = '15px';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = 'cover';
         video.style.transform = 'scaleX(-1)';
-        overlay.appendChild(video);
+        container.appendChild(video);
         
-        // Canvas for composite
+        // Canvas for Dario overlay
         const canvas = document.createElement('canvas');
         canvas.width = 300;
         canvas.height = 300;
         canvas.style.position = 'absolute';
-        canvas.style.top = '50%';
-        canvas.style.left = '50%';
-        canvas.style.transform = 'translate(-50%, -50%)';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
         canvas.style.pointerEvents = 'none';
         const ctx = canvas.getContext('2d');
-        overlay.appendChild(canvas);
+        container.appendChild(canvas);
         
         // Buttons
         const buttonsDiv = document.createElement('div');
-        buttonsDiv.style.marginTop = '20px';
+        buttonsDiv.style.marginTop = '30px';
+        buttonsDiv.style.display = 'flex';
+        buttonsDiv.style.gap = '20px';
         
         const captureBtn = document.createElement('button');
-        captureBtn.textContent = '📷 CAPTURE';
-        captureBtn.style.padding = '10px 20px';
-        captureBtn.style.margin = '5px';
-        captureBtn.style.background = '#ff70a6';
-        captureBtn.style.color = 'white';
+        captureBtn.innerHTML = '📷 CAPTURE';
+        captureBtn.style.padding = '15px 30px';
+        captureBtn.style.background = 'white';
+        captureBtn.style.color = '#ff70a6';
         captureBtn.style.border = 'none';
-        captureBtn.style.borderRadius = '5px';
-        captureBtn.style.fontSize = '14px';
+        captureBtn.style.borderRadius = '30px';
+        captureBtn.style.fontSize = '12px';
         captureBtn.style.fontFamily = 'Press Start 2P, monospace';
         captureBtn.style.cursor = 'pointer';
+        captureBtn.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+        captureBtn.style.transition = 'transform 0.2s';
+        captureBtn.onmouseover = () => captureBtn.style.transform = 'scale(1.1)';
+        captureBtn.onmouseout = () => captureBtn.style.transform = 'scale(1)';
         
         const closeBtn = document.createElement('button');
-        closeBtn.textContent = 'CLOSE';
-        closeBtn.style.padding = '10px 20px';
-        closeBtn.style.margin = '5px';
-        closeBtn.style.background = '#666';
+        closeBtn.innerHTML = '✖ CLOSE';
+        closeBtn.style.padding = '15px 30px';
+        closeBtn.style.background = 'rgba(0,0,0,0.5)';
         closeBtn.style.color = 'white';
         closeBtn.style.border = 'none';
-        closeBtn.style.borderRadius = '5px';
-        closeBtn.style.fontSize = '14px';
+        closeBtn.style.borderRadius = '30px';
+        closeBtn.style.fontSize = '12px';
         closeBtn.style.fontFamily = 'Press Start 2P, monospace';
         closeBtn.style.cursor = 'pointer';
+        closeBtn.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
         
         buttonsDiv.appendChild(captureBtn);
         buttonsDiv.appendChild(closeBtn);
@@ -2189,71 +2171,182 @@ class TamagotchiGame {
         document.body.appendChild(overlay);
         
         // Draw Dario animation
+        let animFrame;
         const drawDario = () => {
             ctx.clearRect(0, 0, 300, 300);
             
             const time = Date.now() * 0.001;
-            const bobY = 230 + Math.sin(time * 3) * 5;
+            const x = 50;
+            const y = 220;
+            const bobY = y + Math.sin(time * 3) * 3;
+            const scale = 2;
             
-            // Draw Dario character
-            ctx.fillStyle = '#ff70a6';
-            ctx.fillRect(40, bobY, 40, 40);
-            
-            ctx.fillStyle = '#fdbcb4';
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.beginPath();
-            ctx.arc(60, bobY - 10, 20, 0, Math.PI * 2);
+            ctx.ellipse(x, y + 30, 20, 8, 0, 0, Math.PI * 2);
             ctx.fill();
             
+            // Arms (waving)
+            const armWave = Math.sin(time * 8) * 0.5;
+            ctx.strokeStyle = '#fdbcb4';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            
+            // Left arm
+            ctx.beginPath();
+            ctx.moveTo(x - 12, bobY);
+            ctx.lineTo(x - 25, bobY - 10);
+            ctx.lineTo(x - 30, bobY - 25 + armWave * 10);
+            ctx.stroke();
+            
+            // Right arm (waving)
+            ctx.beginPath();
+            ctx.moveTo(x + 12, bobY);
+            ctx.lineTo(x + 25, bobY - 10);
+            ctx.lineTo(x + 35, bobY - 30 + armWave * 15);
+            ctx.stroke();
+            
+            // Body
+            ctx.fillStyle = '#ff70a6';
+            ctx.fillRect(x - 15, bobY - 10, 30, 35);
+            
+            // Head
+            ctx.fillStyle = '#fdbcb4';
+            ctx.beginPath();
+            ctx.arc(x, bobY - 25, 18, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Hair
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.arc(x, bobY - 35, 18, Math.PI, 0);
+            ctx.fill();
+            
+            // Eyes (blinking)
             ctx.fillStyle = '#000';
-            ctx.fillRect(50, bobY - 15, 5, 5);
-            ctx.fillRect(65, bobY - 15, 5, 5);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = '12px monospace';
-            ctx.fillText('Say cheese! 📸', 100, bobY);
-            
-            if (video.srcObject) {
-                requestAnimationFrame(drawDario);
+            const blink = Math.floor(time * 1) % 40 < 2;
+            if (!blink) {
+                ctx.fillRect(x - 8, bobY - 28, 4, 4);
+                ctx.fillRect(x + 4, bobY - 28, 4, 4);
+            } else {
+                ctx.fillRect(x - 8, bobY - 26, 4, 1);
+                ctx.fillRect(x + 4, bobY - 26, 4, 1);
             }
+            
+            // Smile
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(x, bobY - 20, 5, 0, Math.PI);
+            ctx.stroke();
+            
+            // Legs
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x - 10, bobY + 25, 8, 15);
+            ctx.fillRect(x + 2, bobY + 25, 8, 15);
+            
+            // Speech bubble
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fillRect(x + 50, bobY - 50, 120, 30);
+            ctx.beginPath();
+            ctx.moveTo(x + 50, bobY - 30);
+            ctx.lineTo(x + 40, bobY - 25);
+            ctx.lineTo(x + 50, bobY - 20);
+            ctx.fill();
+            
+            ctx.fillStyle = '#333';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Say cheese! 🧐', x + 110, bobY - 35);
+            
+            // Hearts floating
+            for (let i = 0; i < 3; i++) {
+                const heartY = ((time * 30 + i * 100) % 300);
+                const heartX = 250 + Math.sin(time + i) * 20;
+                ctx.font = '20px serif';
+                ctx.fillText('💖', heartX, 300 - heartY);
+            }
+            
+            animFrame = requestAnimationFrame(drawDario);
         };
         
         // Get camera
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-            .then(stream => {
-                video.srcObject = stream;
-                drawDario();
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'user',
+                width: { ideal: 300 },
+                height: { ideal: 300 }
+            } 
+        })
+        .then(stream => {
+            video.srcObject = stream;
+            drawDario();
+            
+            captureBtn.onclick = () => {
+                // Flash effect
+                container.style.animation = 'flash 0.3s';
                 
-                captureBtn.onclick = () => {
-                    const captureCanvas = document.createElement('canvas');
-                    captureCanvas.width = 300;
-                    captureCanvas.height = 300;
-                    const captureCtx = captureCanvas.getContext('2d');
-                    
-                    captureCtx.save();
-                    captureCtx.scale(-1, 1);
-                    captureCtx.drawImage(video, -300, 0, 300, 300);
-                    captureCtx.restore();
-                    
-                    captureCtx.drawImage(canvas, 0, 0);
-                    
-                    const link = document.createElement('a');
-                    link.download = `dario-selfie-${Date.now()}.png`;
-                    link.href = captureCanvas.toDataURL();
-                    link.click();
-                    
-                    this.showNotification('Selfie saved! 💖');
-                };
+                const captureCanvas = document.createElement('canvas');
+                captureCanvas.width = 300;
+                captureCanvas.height = 300;
+                const captureCtx = captureCanvas.getContext('2d');
                 
-                closeBtn.onclick = () => {
-                    stream.getTracks().forEach(track => track.stop());
-                    document.body.removeChild(overlay);
-                };
-            })
-            .catch(err => {
-                console.error('Camera error:', err);
-                this.showNotification('Camera not available');
+                // Draw video (mirrored)
+                captureCtx.save();
+                captureCtx.scale(-1, 1);
+                captureCtx.drawImage(video, -300, 0, 300, 300);
+                captureCtx.restore();
+                
+                // Draw Dario overlay
+                captureCtx.drawImage(canvas, 0, 0);
+                
+                // Add frame
+                captureCtx.strokeStyle = '#ff70a6';
+                captureCtx.lineWidth = 8;
+                captureCtx.strokeRect(4, 4, 292, 292);
+                
+                // Add text
+                captureCtx.fillStyle = '#ff70a6';
+                captureCtx.font = 'bold 12px monospace';
+                captureCtx.textAlign = 'center';
+                captureCtx.fillText('Lulu 💖 Tiny Dario', 150, 290);
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = `lulu-dario-selfie-${Date.now()}.png`;
+                link.href = captureCanvas.toDataURL();
+                link.click();
+                
+                this.showNotification('Perfect selfie! 📸💖');
+                this.sound.play('success');
+            };
+            
+            closeBtn.onclick = () => {
+                cancelAnimationFrame(animFrame);
+                stream.getTracks().forEach(track => track.stop());
                 document.body.removeChild(overlay);
-            });
+            };
+        })
+        .catch(err => {
+            console.error('Camera error:', err);
+            this.showNotification('Please allow camera access 📷');
+            document.body.removeChild(overlay);
+        });
+        
+        // Add flash animation style
+        if (!document.getElementById('selfieStyles')) {
+            const style = document.createElement('style');
+            style.id = 'selfieStyles';
+            style.innerHTML = `
+                @keyframes flash {
+                    0% { opacity: 1; }
+                    50% { opacity: 0; background: white; }
+                    100% { opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
     
     showNotification(message) {

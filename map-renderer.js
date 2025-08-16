@@ -497,7 +497,7 @@ class MapRenderer {
     render(ctx, playerX, playerY, camera, mapData) {
         // Clear and set up
         ctx.fillStyle = this.getSkyColor();
-        ctx.fillRect(0, 0, 450, 500);
+        ctx.fillRect(0, 0, 360, 420);
         
         // Draw clouds
         this.renderClouds(ctx);
@@ -851,7 +851,7 @@ class MapRenderer {
                 screenY = screenPos.y;
                 
                 // Check if NPC is visible
-                if (screenX < -tileSize || screenX > 450 || screenY < -tileSize || screenY > 500) {
+                if (screenX < -tileSize || screenX > 360 || screenY < -tileSize || screenY > 420) {
                     return; // Skip rendering if off-screen
                 }
             } else {
@@ -975,7 +975,7 @@ class MapRenderer {
             // Overall lighting overlay
             ctx.fillStyle = this.getLightingColor();
             ctx.globalAlpha = this.lightingAlpha;
-            ctx.fillRect(0, 0, 450, 500);
+            ctx.fillRect(0, 0, 360, 420);
             ctx.globalAlpha = 1;
             
             // Street lights at night
