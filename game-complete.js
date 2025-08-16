@@ -95,6 +95,12 @@ class TamagotchiGame {
         this.camera = new CameraSystem(this);
         this.camera.jumpTo(this.save.player.x, this.save.player.y);
         
+        // Ensure player position is valid
+        if (!this.save.player.x || !this.save.player.y) {
+            this.save.player.x = 26; // UES apartment
+            this.save.player.y = 15;
+        }
+        
         // Fast travel removed - direct exploration only
         
         // Initialize NPCs
@@ -312,12 +318,27 @@ class TamagotchiGame {
                     return;
                 }
             }
-            // Convert click to world position using camera
-            if (this.camera) {
-                const worldPos = this.camera.screenToWorld(x, y - 40);
-                const tileX = Math.floor(worldPos.x / TILE_SIZE);
-                const tileY = Math.floor(worldPos.y / TILE_SIZE);
-                this.movePlayerTo(tileX, tileY);
+            
+            // Check d-pad clicks
+            if (this.dpadBounds) {
+                const {up, down, left, right} = this.dpadBounds;
+                
+                if (x >= up.x && x <= up.x + up.w && y >= up.y && y <= up.y + up.h) {
+                    this.movePlayer(0, -1);
+                    return;
+                }
+                if (x >= down.x && x <= down.x + down.w && y >= down.y && y <= down.y + down.h) {
+                    this.movePlayer(0, 1);
+                    return;
+                }
+                if (x >= left.x && x <= left.x + left.w && y >= left.y && y <= left.y + left.h) {
+                    this.movePlayer(-1, 0);
+                    return;
+                }
+                if (x >= right.x && x <= right.x + right.w && y >= right.y && y <= right.y + right.h) {
+                    this.movePlayer(1, 0);
+                    return;
+                }
             }
         } else if (this.currentMinigame) {
             this.handleMinigameClick(x, y);
@@ -725,7 +746,8 @@ class TamagotchiGame {
             this.ctx.textAlign = 'left';
             this.ctx.fillText(`📍 ${neighborhood}`, 15, CANVAS_HEIGHT - 18);
             
-            // Mobile interact button
+            // Mobile controls
+            this.renderMobileControls();
             this.renderInteractButton();
         }
     }
@@ -2024,6 +2046,94 @@ class TamagotchiGame {
         }
     }
 
+    renderMobileControls() {
+        // D-pad for mobile movement
+        const dpadSize = 30;
+        const dpadX = 20;
+        const dpadY = CANVAS_HEIGHT - 140;
+        
+        // D-pad background
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(dpadX, dpadY, dpadSize * 3, dpadSize * 3);
+        
+        // Up button
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fillRect(dpadX + dpadSize, dpadY, dpadSize, dpadSize);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = '16px serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('↑', dpadX + dpadSize * 1.5, dpadY + dpadSize * 0.5);
+        
+        // Down button
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fillRect(dpadX + dpadSize, dpadY + dpadSize * 2, dpadSize, dpadSize);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillText('↓', dpadX + dpadSize * 1.5, dpadY + dpadSize * 2.5);
+        
+        // Left button
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fillRect(dpadX, dpadY + dpadSize, dpadSize, dpadSize);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillText('←', dpadX + dpadSize * 0.5, dpadY + dpadSize * 1.5);
+        
+        // Right button
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fillRect(dpadX + dpadSize * 2, dpadY + dpadSize, dpadSize, dpadSize);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillText('→', dpadX + dpadSize * 2.5, dpadY + dpadSize * 1.5);
+        
+        // Store d-pad bounds for click detection
+        this.dpadBounds = {
+            up: {x: dpadX + dpadSize, y: dpadY, w: dpadSize, h: dpadSize},
+            down: {x: dpadX + dpadSize, y: dpadY + dpadSize * 2, w: dpadSize, h: dpadSize},
+            left: {x: dpadX, y: dpadY + dpadSize, w: dpadSize, h: dpadSize},
+            right: {x: dpadX + dpadSize * 2, y: dpadY + dpadSize, w: dpadSize, h: dpadSize}
+        };
+    }
+    
+    renderInteractButton() {
+        // Check if there's something to interact with
+        const poi = MAP_POIS.find(p => 
+            Math.abs(p.x - this.save.player.x) <= 1 && 
+            Math.abs(p.y - this.save.player.y) <= 1
+        );
+        
+        const nearbyNPC = this.npcs.find(npc => 
+            Math.abs(npc.currentX - this.save.player.x) <= 1 && 
+            Math.abs(npc.currentY - this.save.player.y) <= 1
+        );
+        
+        if (poi || nearbyNPC) {
+            // Draw interact button
+            const buttonX = CANVAS_WIDTH - 80;
+            const buttonY = CANVAS_HEIGHT - 50;
+            const buttonWidth = 70;
+            const buttonHeight = 35;
+            
+            // Button background
+            this.ctx.fillStyle = 'rgba(255, 112, 166, 0.9)';
+            this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+            
+            // Button border
+            this.ctx.strokeStyle = '#fff';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+            
+            // Button text
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = '10px monospace';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText('INTERACT', buttonX + buttonWidth/2, buttonY + buttonHeight/2);
+            
+            // Store button bounds for click detection
+            this.interactButtonBounds = {buttonX, buttonY, buttonWidth, buttonHeight};
+        } else {
+            this.interactButtonBounds = null;
+        }
+    }
+    
     showNotification(message) {
         const notification = document.getElementById('notification');
         notification.textContent = message;
