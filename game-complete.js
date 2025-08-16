@@ -95,15 +95,14 @@ class TamagotchiGame {
         this.camera = new CameraSystem(this);
         this.camera.jumpTo(this.save.player.x, this.save.player.y);
         
-        // Initialize fast travel
-        this.fastTravel = new FastTravelSystem(this);
+        // Fast travel removed - direct exploration only
         
         // Initialize NPCs
         this.npcs = [
             // Lulu in Williamsburg
             {
-                x: 17,
-                y: 26,
+                x: 47,
+                y: 40,
                 name: 'Lulu',
                 emoji: '👩‍🦰',
                 dialogue: [
@@ -268,16 +267,9 @@ class TamagotchiGame {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
             
-            // Handle fast travel menu first
-            if (this.fastTravel && this.fastTravel.isOpen) {
-                if (this.fastTravel.handleKey(e.key)) {
-                    return;
-                }
-            }
-            
             if (this.currentScreen === 'map') {
                 // Movement keys
-                if (!this.fastTravel.isOpen) {
+                {
                     if (e.key === 'ArrowUp' || e.key === 'w') this.movePlayer(0, -1);
                     if (e.key === 'ArrowDown' || e.key === 's') this.movePlayer(0, 1);
                     if (e.key === 'ArrowLeft' || e.key === 'a') this.movePlayer(-1, 0);
@@ -285,14 +277,7 @@ class TamagotchiGame {
                     if (e.key === ' ' || e.key === 'Enter') this.interactWithPOI();
                 }
                 
-                // Fast travel toggle
-                if (e.key === 't' || e.key === 'T') {
-                    if (this.fastTravel.isOpen) {
-                        this.fastTravel.close();
-                    } else {
-                        this.fastTravel.open();
-                    }
-                }
+                // Fast travel removed
                 
                 // Menu toggle
                 if (e.key === 'm' || e.key === 'M') {
@@ -317,14 +302,16 @@ class TamagotchiGame {
         const x = e.offsetX;
         const y = e.offsetY;
         
-        // Handle fast travel menu clicks first
-        if (this.fastTravel && this.fastTravel.isOpen) {
-            if (this.fastTravel.handleClick(x, y)) {
-                return;
-            }
-        }
-        
         if (this.currentScreen === 'map') {
+            // Check interact button click
+            if (this.interactButtonBounds) {
+                const {buttonX, buttonY, buttonWidth, buttonHeight} = this.interactButtonBounds;
+                if (x >= buttonX && x <= buttonX + buttonWidth &&
+                    y >= buttonY && y <= buttonY + buttonHeight) {
+                    this.interactWithPOI();
+                    return;
+                }
+            }
             // Convert click to world position using camera
             if (this.camera) {
                 const worldPos = this.camera.screenToWorld(x, y - 40);
@@ -727,26 +714,19 @@ class TamagotchiGame {
         if (this.mapRenderer && this.camera) {
             this.mapRenderer.render(this.ctx, this.save.player.x, this.save.player.y, this.camera, NYC_MAP);
             
-            // Render fast travel menu if open
-            if (this.fastTravel) {
-                this.fastTravel.render(this.ctx);
-            }
+            // Fast travel removed
             
-            // Map HUD overlay
-            this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
-            this.ctx.fillRect(0, 0, CANVAS_WIDTH, 40);
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = '10px monospace';
-            this.ctx.textAlign = 'left';
-            
-            // Show current neighborhood
+            // Simple location display at bottom
             const neighborhood = this.getCurrentNeighborhood();
-            this.ctx.fillText(`📍 ${neighborhood}`, 10, 15);
-            this.ctx.fillText(`Coords: (${this.save.player.x}, ${this.save.player.y})`, 10, 28);
+            this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            this.ctx.fillRect(10, CANVAS_HEIGHT - 35, 150, 25);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = '9px monospace';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`📍 ${neighborhood}`, 15, CANVAS_HEIGHT - 18);
             
-            this.ctx.textAlign = 'right';
-            this.ctx.fillText('T: Fast Travel | SPACE: Interact', CANVAS_WIDTH - 10, 15);
-            this.ctx.fillText('M: Menu | P: Photo', CANVAS_WIDTH - 10, 28);
+            // Mobile interact button
+            this.renderInteractButton();
         }
     }
     
