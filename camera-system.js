@@ -175,7 +175,7 @@ class FastTravelSystem {
         
         // Dark overlay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(0, 0, 360, 420);
+        ctx.fillRect(0, 0, 450, 500);
         
         // Menu box
         ctx.fillStyle = '#2c3e50';
@@ -248,7 +248,7 @@ class FastTravelSystem {
         }
         
         // Check close button
-        if (x >= 140 && x <= 220 && y >= 335 && y <= 360) {
+        if (x >= 190 && x <= 260 && y >= 415 && y <= 440) {
             this.close();
             return true;
         }

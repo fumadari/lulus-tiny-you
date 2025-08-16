@@ -3,8 +3,8 @@
 // ============================================
 
 const SAVE_KEY = 'lulu-tiny-you-v5'; // New version for larger map
-const CANVAS_WIDTH = 360;
-const CANVAS_HEIGHT = 420;
+const CANVAS_WIDTH = 450;
+const CANVAS_HEIGHT = 500;
 const TILE_SIZE = 24;
 // MAP_WIDTH and MAP_HEIGHT are now defined in nyc-map-data.js
 
@@ -319,27 +319,11 @@ class TamagotchiGame {
                 }
             }
             
-            // Check d-pad clicks
-            if (this.dpadBounds) {
-                const {up, down, left, right} = this.dpadBounds;
-                
-                if (x >= up.x && x <= up.x + up.w && y >= up.y && y <= up.y + up.h) {
-                    this.movePlayer(0, -1);
-                    return;
-                }
-                if (x >= down.x && x <= down.x + down.w && y >= down.y && y <= down.y + down.h) {
-                    this.movePlayer(0, 1);
-                    return;
-                }
-                if (x >= left.x && x <= left.x + left.w && y >= left.y && y <= left.y + left.h) {
-                    this.movePlayer(-1, 0);
-                    return;
-                }
-                if (x >= right.x && x <= right.x + right.w && y >= right.y && y <= right.y + right.h) {
-                    this.movePlayer(1, 0);
-                    return;
-                }
-            }
+            // Tap to move (restored)
+            const worldPos = this.camera.screenToWorld(x, y);
+            const tileX = Math.floor(worldPos.x / TILE_SIZE);
+            const tileY = Math.floor(worldPos.y / TILE_SIZE);
+            this.movePlayerTo(tileX, tileY);
         } else if (this.currentMinigame) {
             this.handleMinigameClick(x, y);
         }
@@ -746,8 +730,7 @@ class TamagotchiGame {
             this.ctx.textAlign = 'left';
             this.ctx.fillText(`📍 ${neighborhood}`, 15, CANVAS_HEIGHT - 18);
             
-            // Mobile controls
-            this.renderMobileControls();
+            // Mobile interact button only
             this.renderInteractButton();
         }
     }
@@ -2132,6 +2115,145 @@ class TamagotchiGame {
         } else {
             this.interactButtonBounds = null;
         }
+    }
+    
+    startSelfie() {
+        // Create selfie UI overlay
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.background = 'rgba(0,0,0,0.9)';
+        overlay.style.zIndex = '1000';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        
+        // Video element
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.playsInline = true;
+        video.style.width = '300px';
+        video.style.height = '300px';
+        video.style.borderRadius = '15px';
+        video.style.transform = 'scaleX(-1)';
+        overlay.appendChild(video);
+        
+        // Canvas for composite
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 300;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '50%';
+        canvas.style.left = '50%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+        canvas.style.pointerEvents = 'none';
+        const ctx = canvas.getContext('2d');
+        overlay.appendChild(canvas);
+        
+        // Buttons
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.style.marginTop = '20px';
+        
+        const captureBtn = document.createElement('button');
+        captureBtn.textContent = '📷 CAPTURE';
+        captureBtn.style.padding = '10px 20px';
+        captureBtn.style.margin = '5px';
+        captureBtn.style.background = '#ff70a6';
+        captureBtn.style.color = 'white';
+        captureBtn.style.border = 'none';
+        captureBtn.style.borderRadius = '5px';
+        captureBtn.style.fontSize = '14px';
+        captureBtn.style.fontFamily = 'Press Start 2P, monospace';
+        captureBtn.style.cursor = 'pointer';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'CLOSE';
+        closeBtn.style.padding = '10px 20px';
+        closeBtn.style.margin = '5px';
+        closeBtn.style.background = '#666';
+        closeBtn.style.color = 'white';
+        closeBtn.style.border = 'none';
+        closeBtn.style.borderRadius = '5px';
+        closeBtn.style.fontSize = '14px';
+        closeBtn.style.fontFamily = 'Press Start 2P, monospace';
+        closeBtn.style.cursor = 'pointer';
+        
+        buttonsDiv.appendChild(captureBtn);
+        buttonsDiv.appendChild(closeBtn);
+        overlay.appendChild(buttonsDiv);
+        
+        document.body.appendChild(overlay);
+        
+        // Draw Dario animation
+        const drawDario = () => {
+            ctx.clearRect(0, 0, 300, 300);
+            
+            const time = Date.now() * 0.001;
+            const bobY = 230 + Math.sin(time * 3) * 5;
+            
+            // Draw Dario character
+            ctx.fillStyle = '#ff70a6';
+            ctx.fillRect(40, bobY, 40, 40);
+            
+            ctx.fillStyle = '#fdbcb4';
+            ctx.beginPath();
+            ctx.arc(60, bobY - 10, 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(50, bobY - 15, 5, 5);
+            ctx.fillRect(65, bobY - 15, 5, 5);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '12px monospace';
+            ctx.fillText('Say cheese! 📸', 100, bobY);
+            
+            if (video.srcObject) {
+                requestAnimationFrame(drawDario);
+            }
+        };
+        
+        // Get camera
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+            .then(stream => {
+                video.srcObject = stream;
+                drawDario();
+                
+                captureBtn.onclick = () => {
+                    const captureCanvas = document.createElement('canvas');
+                    captureCanvas.width = 300;
+                    captureCanvas.height = 300;
+                    const captureCtx = captureCanvas.getContext('2d');
+                    
+                    captureCtx.save();
+                    captureCtx.scale(-1, 1);
+                    captureCtx.drawImage(video, -300, 0, 300, 300);
+                    captureCtx.restore();
+                    
+                    captureCtx.drawImage(canvas, 0, 0);
+                    
+                    const link = document.createElement('a');
+                    link.download = `dario-selfie-${Date.now()}.png`;
+                    link.href = captureCanvas.toDataURL();
+                    link.click();
+                    
+                    this.showNotification('Selfie saved! 💖');
+                };
+                
+                closeBtn.onclick = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    document.body.removeChild(overlay);
+                };
+            })
+            .catch(err => {
+                console.error('Camera error:', err);
+                this.showNotification('Camera not available');
+                document.body.removeChild(overlay);
+            });
     }
     
     showNotification(message) {
