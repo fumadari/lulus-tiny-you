@@ -689,10 +689,9 @@ class TamagotchiGame {
             return;
         }
         
-        // Check collision
+        // Check collision silently
         const tile = NYC_MAP[newY][newX];
-        if (tile === 3) { // Can't walk on water
-            this.showNotification("Can't swim! 🌊");
+        if (tile === 3 || tile === 2 || tile === 8 || tile === 9) { // Water or buildings - block silently
             return;
         }
         

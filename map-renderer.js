@@ -528,8 +528,7 @@ class MapRenderer {
         // Apply lighting overlay
         this.renderLighting(ctx);
         
-        // Draw minimap
-        this.renderMinimap(ctx, playerX, playerY);
+        // Minimap removed for cleaner view
     }
     
     getSkyColor() {
