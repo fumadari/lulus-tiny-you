@@ -98,6 +98,93 @@ class TamagotchiGame {
         // Initialize fast travel
         this.fastTravel = new FastTravelSystem(this);
         
+        // Initialize NPCs
+        this.npcs = [
+            // Lulu in Williamsburg
+            {
+                x: 17,
+                y: 26,
+                name: 'Lulu',
+                emoji: '👩‍🦰',
+                dialogue: [
+                    "Hey there, Tiny Dario! 💕",
+                    "I love exploring Williamsburg with you!",
+                    "Want to grab some coffee? ☕",
+                    "This neighborhood has the best vibes!"
+                ],
+                movePattern: 'wander',
+                moveRadius: 2
+            },
+            // Cat in Central Park
+            {
+                x: 24,
+                y: 10,
+                name: 'Mittens',
+                emoji: '🐱',
+                dialogue: [
+                    "*purrs happily*",
+                    "Meow! 😸",
+                    "*rubs against your leg*",
+                    "*stretches and yawns*"
+                ],
+                movePattern: 'lazy',
+                moveRadius: 1
+            },
+            // Girl 1 near Times Square
+            {
+                x: 22,
+                y: 14,
+                name: 'Sarah',
+                emoji: '👱‍♀️',
+                dialogue: [
+                    "Oh wow, is that Dario? So cute! 😊",
+                    "I heard you're really smart!",
+                    "Can I take a selfie with you?",
+                    "You're adorable! 💖"
+                ],
+                movePattern: 'stationary'
+            },
+            // Girl 2 in East Village
+            {
+                x: 28,
+                y: 18,
+                name: 'Emma',
+                emoji: '👩',
+                dialogue: [
+                    "Hey Dario! You're looking great today!",
+                    "I love your pixel art style! 🎨",
+                    "Want to hang out sometime?",
+                    "You always make me smile! 😄"
+                ],
+                movePattern: 'pace',
+                moveRadius: 3
+            },
+            // Girl 3 near Brooklyn Bridge
+            {
+                x: 25,
+                y: 22,
+                name: 'Sophia',
+                emoji: '👩‍🦱',
+                dialogue: [
+                    "Dario! I was hoping to see you!",
+                    "You're the talk of the town! 🌟",
+                    "Everyone thinks you're amazing!",
+                    "Can I get your number? 📱"
+                ],
+                movePattern: 'wander',
+                moveRadius: 2
+            }
+        ];
+        
+        // Initialize NPC positions and states
+        this.npcs.forEach(npc => {
+            npc.currentX = npc.x;
+            npc.currentY = npc.y;
+            npc.moveTimer = 0;
+            npc.dialogueIndex = 0;
+            npc.facing = 'down';
+        });
+        
         // Initialize Lulu interaction system
         this.luluInteraction = new LuluInteraction(this);
         
@@ -695,6 +782,14 @@ class TamagotchiGame {
             return;
         }
         
+        // Check NPC collision
+        for (const npc of this.npcs) {
+            if (npc.currentX === newX && npc.currentY === newY) {
+                this.interactWithNPC(npc);
+                return;
+            }
+        }
+        
         // Move player
         this.save.player.x = newX;
         this.save.player.y = newY;
@@ -710,6 +805,9 @@ class TamagotchiGame {
         if (dy < 0) this.save.player.facing = 'up';
         
         setTimeout(() => this.isMoving = false, 200);
+        
+        // Update NPCs
+        this.updateNPCs();
         
         // Random encounters
         if (Math.random() < 0.05) {
@@ -730,6 +828,100 @@ class TamagotchiGame {
         }
     }
 
+    updateNPCs() {
+        this.npcs.forEach(npc => {
+            npc.moveTimer--;
+            
+            if (npc.moveTimer <= 0) {
+                // Reset timer
+                npc.moveTimer = 60 + Math.random() * 120; // Move every 1-3 seconds
+                
+                // Move based on pattern
+                if (npc.movePattern === 'wander' && npc.moveRadius) {
+                    const directions = [
+                        {dx: 0, dy: -1, facing: 'up'},
+                        {dx: 0, dy: 1, facing: 'down'},
+                        {dx: -1, dy: 0, facing: 'left'},
+                        {dx: 1, dy: 0, facing: 'right'}
+                    ];
+                    const dir = directions[Math.floor(Math.random() * directions.length)];
+                    const newX = npc.currentX + dir.dx;
+                    const newY = npc.currentY + dir.dy;
+                    
+                    // Check if within radius and not colliding
+                    const distFromHome = Math.abs(newX - npc.x) + Math.abs(newY - npc.y);
+                    if (distFromHome <= npc.moveRadius && 
+                        newX >= 0 && newX < MAP_WIDTH && 
+                        newY >= 0 && newY < MAP_HEIGHT) {
+                        const tile = NYC_MAP[newY][newX];
+                        if (tile !== 3 && tile !== 2 && tile !== 8 && tile !== 9) {
+                            // Check player collision
+                            if (newX !== this.save.player.x || newY !== this.save.player.y) {
+                                npc.currentX = newX;
+                                npc.currentY = newY;
+                                npc.facing = dir.facing;
+                            }
+                        }
+                    }
+                } else if (npc.movePattern === 'pace' && npc.moveRadius) {
+                    // Pace back and forth
+                    if (!npc.paceDirection) npc.paceDirection = 1;
+                    const newX = npc.currentX + npc.paceDirection;
+                    
+                    if (Math.abs(newX - npc.x) > npc.moveRadius || 
+                        newX < 0 || newX >= MAP_WIDTH ||
+                        NYC_MAP[npc.currentY][newX] === 3 || NYC_MAP[npc.currentY][newX] === 2) {
+                        npc.paceDirection *= -1;
+                    } else if (newX !== this.save.player.x || npc.currentY !== this.save.player.y) {
+                        npc.currentX = newX;
+                        npc.facing = npc.paceDirection > 0 ? 'right' : 'left';
+                    }
+                } else if (npc.movePattern === 'lazy') {
+                    // Rarely move
+                    if (Math.random() < 0.1) {
+                        const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
+                        const dir = directions[Math.floor(Math.random() * directions.length)];
+                        const newX = npc.currentX + dir.dx;
+                        const newY = npc.currentY + dir.dy;
+                        
+                        if (Math.abs(newX - npc.x) <= 1 && Math.abs(newY - npc.y) <= 1 &&
+                            newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT) {
+                            const tile = NYC_MAP[newY][newX];
+                            if (tile !== 3 && tile !== 2 && tile !== 8 && tile !== 9) {
+                                if (newX !== this.save.player.x || newY !== this.save.player.y) {
+                                    npc.currentX = newX;
+                                    npc.currentY = newY;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    interactWithNPC(npc) {
+        // Show dialogue
+        const dialogue = npc.dialogue[npc.dialogueIndex];
+        this.showNotification(`${npc.name}: ${dialogue}`);
+        
+        // Cycle through dialogue
+        npc.dialogueIndex = (npc.dialogueIndex + 1) % npc.dialogue.length;
+        
+        // Give hearts for interacting with Lulu
+        if (npc.name === 'Lulu') {
+            this.save.currency.hearts += 5;
+            this.showNotification('+5 💖');
+        }
+        
+        // Pet the cat
+        if (npc.name === 'Mittens') {
+            this.save.stats.happiness = Math.min(100, this.save.stats.happiness + 10);
+        }
+        
+        this.sound.play('success');
+    }
+    
     interactWithPOI() {
         const poi = MAP_POIS.find(p => 
             Math.abs(p.x - this.save.player.x) <= 1 && 

@@ -522,6 +522,11 @@ class MapRenderer {
         this.renderVehicles(ctx, camera);
         this.renderBirds(ctx);
         
+        // Draw NPCs
+        if (this.game && this.game.npcs) {
+            this.renderNPCs(ctx, camera);
+        }
+        
         // Draw player character (pass camera for proper positioning)
         this.renderPlayer(ctx, playerX, playerY, camera);
         
@@ -827,6 +832,56 @@ class MapRenderer {
         });
     }
     
+    renderNPCs(ctx, camera) {
+        const npcs = this.game.npcs;
+        const tileSize = this.tileSize;
+        
+        npcs.forEach(npc => {
+            // Get world position
+            const worldX = npc.currentX * tileSize;
+            const worldY = npc.currentY * tileSize;
+            
+            // Convert to screen coordinates
+            let screenX, screenY;
+            if (camera) {
+                const screenPos = camera.worldToScreen(worldX, worldY);
+                screenX = screenPos.x;
+                screenY = screenPos.y;
+                
+                // Check if NPC is visible
+                if (screenX < -tileSize || screenX > 360 || screenY < -tileSize || screenY > 420) {
+                    return; // Skip rendering if off-screen
+                }
+            } else {
+                screenX = worldX;
+                screenY = worldY + 40;
+            }
+            
+            // Draw NPC emoji
+            ctx.save();
+            ctx.font = '20px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Add shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillText(npc.emoji, screenX + tileSize/2 + 1, screenY + tileSize/2 + 1);
+            
+            // Draw emoji
+            ctx.fillStyle = 'white';
+            ctx.fillText(npc.emoji, screenX + tileSize/2, screenY + tileSize/2);
+            
+            // Draw name label
+            ctx.font = '8px monospace';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(screenX, screenY - 10, tileSize, 10);
+            ctx.fillStyle = 'white';
+            ctx.fillText(npc.name, screenX + tileSize/2, screenY - 5);
+            
+            ctx.restore();
+        });
+    }
+    
     renderPlayer(ctx, playerX, playerY, camera) {
         // Calculate screen position with camera
         let x = playerX * this.tileSize + this.tileSize / 2;
@@ -922,22 +977,29 @@ class MapRenderer {
             ctx.globalAlpha = 1;
             
             // Street lights at night
-            if (this.timeOfDay === 'night') {
+            if (this.timeOfDay === 'night' && this.game && this.game.camera) {
                 ctx.globalCompositeOperation = 'screen';
                 
-                // Add street light glows
-                for (let y = 0; y < 15; y++) {
-                    for (let x = 0; x < 15; x++) {
-                        if (NYC_MAP[y][x] === 1 && (x + y) % 3 === 0) { // Road tiles
-                            const lightX = x * this.tileSize + 12;
-                            const lightY = y * this.tileSize + 52;
+                // Get visible tile range
+                const range = this.game.camera.getVisibleTileRange();
+                
+                // Add street light glows in world coordinates
+                for (let y = range.startY; y < range.endY; y++) {
+                    for (let x = range.startX; x < range.endX; x++) {
+                        if (NYC_MAP[y] && NYC_MAP[y][x] === 1 && (x + y) % 3 === 0) { // Road tiles
+                            // World coordinates
+                            const worldX = x * this.tileSize + 12;
+                            const worldY = y * this.tileSize + 12;
+                            
+                            // Convert to screen coordinates
+                            const screenPos = this.game.camera.worldToScreen(worldX, worldY);
                             
                             // Light glow
-                            const gradient = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, 30);
+                            const gradient = ctx.createRadialGradient(screenPos.x, screenPos.y, 0, screenPos.x, screenPos.y, 30);
                             gradient.addColorStop(0, 'rgba(255, 235, 59, 0.8)');
                             gradient.addColorStop(1, 'rgba(255, 235, 59, 0)');
                             ctx.fillStyle = gradient;
-                            ctx.fillRect(lightX - 30, lightY - 30, 60, 60);
+                            ctx.fillRect(screenPos.x - 30, screenPos.y - 30, 60, 60);
                         }
                     }
                 }
