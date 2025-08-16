@@ -522,13 +522,13 @@ class MapRenderer {
         this.renderVehicles(ctx, camera);
         this.renderBirds(ctx);
         
-        // Draw NPCs
+        // Draw player character FIRST (so NPCs can appear on top)
+        this.renderPlayer(ctx, playerX, playerY, camera);
+        
+        // Draw NPCs after player
         if (this.game && this.game.npcs) {
             this.renderNPCs(ctx, camera);
         }
-        
-        // Draw player character (pass camera for proper positioning)
-        this.renderPlayer(ctx, playerX, playerY, camera);
         
         // Apply lighting overlay
         this.renderLighting(ctx);
@@ -834,6 +834,8 @@ class MapRenderer {
     
     renderNPCs(ctx, camera) {
         const npcs = this.game.npcs;
+        if (!npcs || !Array.isArray(npcs)) return; // Safety check
+        
         const tileSize = this.tileSize;
         
         npcs.forEach(npc => {
