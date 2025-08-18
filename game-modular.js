@@ -1523,15 +1523,55 @@ The better you care for him, the happier he'll be!
     manageSave() {
         this.ui.showModal('Save Data', 'Choose an option:', [
             { 
-                text: 'Export Save', 
+                text: 'iPhone Photo Backup', 
+                action: async () => {
+                    try {
+                        await SaveManager.downloadiPhoneBackup(this.save);
+                        this.ui.closeModal();
+                        this.ui.showNotification('Photo backup created! Save to Photos 📸✅');
+                    } catch (err) {
+                        this.ui.showNotification('Photo backup failed! 📸❌');
+                    }
+                }
+            },
+            {
+                text: 'Share to Notes',
+                action: async () => {
+                    try {
+                        const success = await SaveManager.shareTonotes(this.save);
+                        this.ui.closeModal();
+                        if (success) {
+                            this.ui.showNotification('Shared to Notes! 📝✅');
+                        } else {
+                            this.ui.showNotification('Share cancelled 📝⚠️');
+                        }
+                    } catch (err) {
+                        this.ui.showNotification('Share failed! 📝❌');
+                    }
+                }
+            },
+            {
+                text: 'Files App Backup',
                 action: () => {
-                    SaveManager.exportSave(this.save);
-                    this.ui.closeModal();
-                    this.ui.showNotification('Save exported! 📤✅');
+                    try {
+                        SaveManager.createiPhoneFileBackup(this.save);
+                        this.ui.closeModal();
+                        this.ui.showNotification('File backup created! 📁✅');
+                    } catch (err) {
+                        this.ui.showNotification('File backup failed! 📁❌');
+                    }
                 }
             },
             { 
-                text: 'Import Save', 
+                text: 'Export JSON', 
+                action: () => {
+                    SaveManager.exportSave(this.save);
+                    this.ui.closeModal();
+                    this.ui.showNotification('JSON exported! 📤✅');
+                }
+            },
+            { 
+                text: 'Import JSON', 
                 action: () => {
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -1542,7 +1582,7 @@ The better you care for him, the happier he'll be!
                             const data = await SaveManager.importSave(file);
                             this.save = data;
                             SaveManager.saveNow(this.save);
-                            this.ui.showNotification('Save imported! 📥✅');
+                            this.ui.showNotification('JSON imported! 📥✅');
                             this.ui.closeModal();
                             location.reload();
                         } catch (err) {

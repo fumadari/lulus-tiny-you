@@ -125,6 +125,16 @@ export class SaveManager {
                 }
             }
             
+            // If all storage methods failed, try iPhone emergency backups
+            if (!saved) {
+                const emergencyBackup = this.loadFromiPhoneEmergencyBackup();
+                if (emergencyBackup) {
+                    console.log('Restored from iPhone emergency backup!');
+                    this.saveToAllStorages(emergencyBackup);
+                    return emergencyBackup;
+                }
+            }
+            
             // If all storage methods failed, try URL hash backup (for bookmark deletion recovery)
             if (!saved) {
                 const urlBackup = this.loadFromURLHash();
@@ -228,8 +238,47 @@ export class SaveManager {
             
             // Also try to store in clipboard as additional backup
             this.createClipboardBackup(backup);
+            
+            // For iPhone: try to persist in a special way
+            this.createiPhonePersistentBackup(gameState);
         } catch (e) {
             console.error('URL backup error:', e);
+        }
+    }
+    
+    static createiPhonePersistentBackup(gameState) {
+        try {
+            // Create a special localStorage key that might persist longer on iOS
+            const persistentBackup = {
+                saveCode: this.generateSaveCode(gameState),
+                timestamp: Date.now(),
+                stats: gameState.stats,
+                currency: gameState.currency
+            };
+            
+            // Use multiple storage strategies for iPhone
+            const keys = [
+                'dario-game-backup-emergency',
+                'tamagotchi-dario-safe-backup',
+                'lulu-game-persistent-save'
+            ];
+            
+            keys.forEach(key => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(persistentBackup));
+                } catch (e) {
+                    // Silent fail for quota exceeded
+                }
+            });
+            
+            // Also try sessionStorage with different keys
+            try {
+                sessionStorage.setItem('dario-emergency-backup', JSON.stringify(persistentBackup));
+            } catch (e) {
+                // Silent fail
+            }
+        } catch (e) {
+            console.error('iPhone persistent backup failed:', e);
         }
     }
     
@@ -250,6 +299,45 @@ export class SaveManager {
         } catch (e) {
             console.error('Clipboard backup error:', e);
         }
+    }
+    
+    static loadFromiPhoneEmergencyBackup() {
+        const emergencyKeys = [
+            'dario-game-backup-emergency',
+            'tamagotchi-dario-safe-backup', 
+            'lulu-game-persistent-save',
+            'dario-emergency-backup' // sessionStorage key
+        ];
+        
+        for (const key of emergencyKeys) {
+            try {
+                // Try localStorage first
+                let backup = localStorage.getItem(key);
+                if (!backup) {
+                    // Try sessionStorage
+                    backup = sessionStorage.getItem(key);
+                }
+                
+                if (backup) {
+                    const data = JSON.parse(backup);
+                    if (data.timestamp && Date.now() - data.timestamp < 604800000) { // 7 days
+                        // If we have a save code, use it
+                        if (data.saveCode) {
+                            return this.importSaveCode(data.saveCode);
+                        }
+                        // Otherwise reconstruct from partial data
+                        const fullSave = this.createDefaultSave();
+                        if (data.stats) fullSave.stats = { ...fullSave.stats, ...data.stats };
+                        if (data.currency) fullSave.currency = { ...fullSave.currency, ...data.currency };
+                        return fullSave;
+                    }
+                }
+            } catch (e) {
+                // Continue trying other keys
+                continue;
+            }
+        }
+        return null;
     }
     
     static loadFromURLHash() {
@@ -346,6 +434,185 @@ export class SaveManager {
             return fullSave;
         } catch (e) {
             throw new Error('Invalid save code format');
+        }
+    }
+    
+    static createiPhonePhotoBackup(gameState) {
+        // Create a visual backup image that can be saved to iPhone Photos
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 1200;
+        const ctx = canvas.getContext('2d');
+        
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
+        gradient.addColorStop(0, '#ff70a6');
+        gradient.addColorStop(0.5, '#ff9a9e');
+        gradient.addColorStop(1, '#fecfef');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 800, 1200);
+        
+        // Add title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎮 TAMAGOTCHI DARIO', 400, 80);
+        ctx.fillText('Save Backup', 400, 140);
+        
+        // Add current date
+        const date = new Date().toLocaleDateString();
+        ctx.font = '24px Arial';
+        ctx.fillText(`Saved: ${date}`, 400, 180);
+        
+        // Display stats visually
+        const stats = gameState.stats;
+        const currency = gameState.currency;
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'left';
+        
+        // Stats section
+        ctx.fillText('📊 STATS:', 50, 250);
+        ctx.font = '28px Arial';
+        ctx.fillText(`🍎 Hunger: ${stats.hunger}/100`, 50, 300);
+        ctx.fillText(`⚡ Energy: ${stats.energy}/100`, 50, 340);
+        ctx.fillText(`😊 Happiness: ${stats.happiness}/100`, 50, 380);
+        ctx.fillText(`💖 Hearts: ${currency.hearts}`, 50, 420);
+        ctx.fillText(`🏆 Tokens: ${gameState.tokens}`, 50, 460);
+        ctx.fillText(`📈 Level: ${gameState.level}`, 50, 500);
+        ctx.fillText(`👅 Licks: ${gameState.licks}`, 50, 540);
+        
+        // Create save code section
+        const saveCode = this.generateSaveCode(gameState);
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('💾 SAVE CODE:', 50, 620);
+        
+        // Split save code into multiple lines for readability
+        ctx.font = '16px monospace';
+        const lineLength = 50;
+        for (let i = 0; i < saveCode.length; i += lineLength) {
+            const line = saveCode.substring(i, i + lineLength);
+            ctx.fillText(line, 50, 660 + (i / lineLength) * 25);
+        }
+        
+        // Instructions
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('📱 INSTRUCTIONS:', 50, 900);
+        ctx.font = '18px Arial';
+        ctx.fillText('1. Save this image to Photos', 50, 940);
+        ctx.fillText('2. To restore: copy the save code above', 50, 970);
+        ctx.fillText('3. In game: Games → Save Data → Load Code', 50, 1000);
+        ctx.fillText('4. Paste the code to restore your progress', 50, 1030);
+        
+        // Add cute Dario emoji
+        ctx.font = '120px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🥺', 400, 1150);
+        
+        return canvas;
+    }
+    
+    static async downloadiPhoneBackup(gameState) {
+        try {
+            const canvas = this.createiPhonePhotoBackup(gameState);
+            
+            // Convert to blob and download
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `dario-save-${Date.now()}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    resolve();
+                }, 'image/png');
+            });
+        } catch (e) {
+            console.error('iPhone backup creation failed:', e);
+            throw e;
+        }
+    }
+    
+    static createiPhoneFileBackup(gameState) {
+        // Create a text file that can be saved to iPhone Files app
+        const saveData = {
+            version: 5,
+            created: new Date().toISOString(),
+            gameData: gameState,
+            saveCode: this.generateSaveCode(gameState),
+            instructions: [
+                "This is your Tamagotchi Dario save backup!",
+                "To restore:",
+                "1. Open the game in Safari",
+                "2. Go to Games → Save Data → Load Code", 
+                "3. Copy and paste the saveCode from this file"
+            ]
+        };
+        
+        const content = JSON.stringify(saveData, null, 2);
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tamagotchi-dario-backup-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    static async shareTonotes(gameState) {
+        // Create shareable content for iPhone Notes
+        const saveCode = this.generateSaveCode(gameState);
+        const shareText = `🎮 TAMAGOTCHI DARIO SAVE BACKUP
+Created: ${new Date().toLocaleDateString()}
+
+📊 Current Stats:
+🍎 Hunger: ${gameState.stats.hunger}/100
+⚡ Energy: ${gameState.stats.energy}/100  
+😊 Happiness: ${gameState.stats.happiness}/100
+💖 Hearts: ${gameState.currency.hearts}
+🏆 Tokens: ${gameState.tokens}
+📈 Level: ${gameState.level}
+👅 Licks: ${gameState.licks}
+
+💾 SAVE CODE:
+${saveCode}
+
+📱 To restore your game:
+1. Open Tamagotchi Dario in Safari
+2. Go to Games → Save Data → Load Code
+3. Copy and paste the save code above
+4. Your progress will be restored! 🎉`;
+
+        if (navigator.share) {
+            // Use native share sheet on iOS
+            try {
+                await navigator.share({
+                    title: 'Tamagotchi Dario Save Backup',
+                    text: shareText
+                });
+                return true;
+            } catch (e) {
+                console.log('Share cancelled or failed');
+                return false;
+            }
+        } else {
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(shareText);
+                return true;
+            } catch (e) {
+                // Manual copy fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = shareText;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return true;
+            }
         }
     }
     
