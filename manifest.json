@@ -1,6 +1,6 @@
 {
-  "name": "Lulu's Tiny You - Pocket Dario Tamagotchi",
-  "short_name": "Tiny You",
+  "name": "Tamagotchi Dario - Pocket Dario Game",
+  "short_name": "Tamagotchi Dario",
   "description": "Take care of your adorable pocket Dario in this Tamagotchi-style game made with love for Lulu!",
   "start_url": "./",
   "display": "standalone",
