@@ -1367,6 +1367,9 @@ class TamagotchiGame {
     // ===== SHOP SYSTEM =====
     
     openShop() {
+        // Ensure shop has latest items (important for existing saves)
+        this.ensureShopItems();
+        
         this.ui.showModal(
             "Hearts Shop 💖🛒",
             this.generateShopHTML(),
@@ -1374,6 +1377,73 @@ class TamagotchiGame {
                 { text: "Close Shop", action: () => this.ui.closeModal() }
             ]
         );
+    }
+    
+    ensureShopItems() {
+        if (!this.save.shop) {
+            this.save.shop = { purchases: [], availableItems: [] };
+        }
+        
+        // Default shop items (always ensure these exist)
+        const defaultItems = [
+            {
+                id: 'apartment_cat',
+                name: 'Lulu\'s Cat',
+                description: 'A cute cat that lives in Lulu\'s apartment',
+                price: 50,
+                emoji: '🐱',
+                available: false,
+                comingSoon: true
+            },
+            {
+                id: 'celcius_drink',
+                name: 'Celcius Energy Drink',
+                description: 'High-energy drink that boosts Dario\'s energy',
+                price: 25,
+                emoji: '🥤',
+                available: false,
+                comingSoon: true
+            },
+            {
+                id: 'premium_steak',
+                name: 'Premium Steak',
+                description: 'Delicious steak that satisfies hunger completely',
+                price: 40,
+                emoji: '🥩',
+                available: false,
+                comingSoon: true
+            },
+            {
+                id: 'monkey_painting',
+                name: 'Monkey Painting',
+                description: 'Artistic monkey painting for the apartment',
+                price: 80,
+                emoji: '🖼️',
+                available: false,
+                comingSoon: true
+            },
+            {
+                id: 'dario_outfit',
+                name: 'New Outfit for Dario',
+                description: 'Stylish new clothes to make Dario look fresh',
+                price: 60,
+                emoji: '👕',
+                available: false,
+                comingSoon: true
+            },
+            {
+                id: 'lulu_ring',
+                name: 'Ring for Lulu',
+                description: 'Beautiful engagement ring for Lulu ✨',
+                price: 999,
+                emoji: '💍',
+                available: false,
+                comingSoon: true
+            }
+        ];
+        
+        // Update shop items if they don't exist or are outdated
+        this.save.shop.availableItems = defaultItems;
     }
     
     generateShopHTML() {
