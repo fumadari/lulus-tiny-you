@@ -1443,8 +1443,23 @@ class TamagotchiGame {
     
     manualLoad() {
         try {
+            // Capture console output to see where the save was loaded from
+            const originalLog = console.log;
+            let loadMessage = "Game loaded! 📂✅";
+            
+            console.log = (message) => {
+                if (message.includes('Restored from')) {
+                    loadMessage = `${message} 📂✅`;
+                }
+                originalLog(message);
+            };
+            
             // Reload save from storage
             const loadedSave = SaveManager.loadSave();
+            
+            // Restore original console.log
+            console.log = originalLog;
+            
             this.save = loadedSave;
             
             // Apply offline decay for loaded save
@@ -1456,7 +1471,7 @@ class TamagotchiGame {
                 this.save.shop = { purchases: [], availableItems: [] };
             }
             
-            this.ui.showNotification("Game loaded! 📂✅");
+            this.ui.showNotification(loadMessage);
             
             // Save the loaded state (in case offline decay applied changes)
             SaveManager.saveNow(this.save);
@@ -1512,7 +1527,7 @@ The better you care for him, the happier he'll be!
                 action: () => {
                     SaveManager.exportSave(this.save);
                     this.ui.closeModal();
-                    this.ui.showNotification('Save exported!');
+                    this.ui.showNotification('Save exported! 📤✅');
                 }
             },
             { 
@@ -1526,14 +1541,60 @@ The better you care for him, the happier he'll be!
                             const file = e.target.files[0];
                             const data = await SaveManager.importSave(file);
                             this.save = data;
-                            this.ui.showNotification('Save imported!');
+                            SaveManager.saveNow(this.save);
+                            this.ui.showNotification('Save imported! 📥✅');
                             this.ui.closeModal();
                             location.reload();
                         } catch (err) {
-                            this.ui.showNotification('Import failed!');
+                            this.ui.showNotification('Import failed! 📥❌');
                         }
                     };
                     input.click();
+                }
+            },
+            {
+                text: 'Save Code',
+                action: () => {
+                    const saveCode = SaveManager.generateSaveCode(this.save);
+                    this.ui.showModal('Save Code', 
+                        `Copy this code to backup your save:<br><br>
+                        <textarea readonly style="width:100%;height:60px;background:#000;color:#fff;border:1px solid #ff70a6;padding:8px;font-size:8px;font-family:monospace;resize:none;">${saveCode}</textarea>
+                        <br><br>To restore, use "Load Code" and paste this code.`, 
+                        [{ text: 'OK', action: () => this.ui.closeModal() }]
+                    );
+                }
+            },
+            {
+                text: 'Load Code',
+                action: () => {
+                    this.ui.showModal('Load Save Code', 
+                        `Paste your save code here:<br><br>
+                        <textarea id="saveCodeInput" placeholder="Paste save code here..." style="width:100%;height:60px;background:#000;color:#fff;border:1px solid #ff70a6;padding:8px;font-size:8px;font-family:monospace;resize:none;"></textarea>`, 
+                        [
+                            { 
+                                text: 'Load', 
+                                action: () => {
+                                    try {
+                                        const input = document.getElementById('saveCodeInput');
+                                        const saveCode = input.value.trim();
+                                        if (!saveCode) {
+                                            this.ui.showNotification('Please enter a save code! 📝❌');
+                                            return;
+                                        }
+                                        const data = SaveManager.importSaveCode(saveCode);
+                                        this.save = data;
+                                        SaveManager.saveNow(this.save);
+                                        this.ui.showNotification('Save code loaded! 💾✅');
+                                        this.ui.closeModal();
+                                        location.reload();
+                                    } catch (err) {
+                                        this.ui.showNotification('Invalid save code! 📝❌');
+                                    }
+                                }
+                            },
+                            { text: 'Cancel', action: () => this.ui.closeModal() }
+                        ]
+                    );
                 }
             },
             { text: 'Cancel', action: () => this.ui.closeModal() }

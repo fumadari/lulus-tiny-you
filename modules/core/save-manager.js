@@ -125,6 +125,16 @@ export class SaveManager {
                 }
             }
             
+            // If all storage methods failed, try URL hash backup (for bookmark deletion recovery)
+            if (!saved) {
+                const urlBackup = this.loadFromURLHash();
+                if (urlBackup) {
+                    console.log('Restored from URL hash backup! Save data recovered from bookmark deletion.');
+                    this.saveToAllStorages(urlBackup);
+                    return urlBackup;
+                }
+            }
+            
             if (!saved) {
                 const newSave = this.createDefaultSave();
                 // Immediately save to all storage methods
@@ -144,6 +154,18 @@ export class SaveManager {
             return data;
         } catch (e) {
             console.error('Load save error:', e);
+            // Last resort: try URL backup even after errors
+            try {
+                const urlBackup = this.loadFromURLHash();
+                if (urlBackup) {
+                    console.log('Emergency recovery from URL backup successful!');
+                    this.saveToAllStorages(urlBackup);
+                    return urlBackup;
+                }
+            } catch (urlError) {
+                console.error('URL backup recovery failed:', urlError);
+            }
+            
             const newSave = this.createDefaultSave();
             this.saveToAllStorages(newSave);
             return newSave;
@@ -185,38 +207,146 @@ export class SaveManager {
     
     static updateURLHash(gameState) {
         try {
-            // Store minimal essential data in URL hash for emergency recovery
-            const essential = {
+            // Store comprehensive data in URL hash for bookmark deletion recovery
+            const backup = {
                 stats: gameState.stats,
                 currency: gameState.currency,
                 tokens: gameState.tokens,
                 level: gameState.level,
+                shop: gameState.shop,
+                player: gameState.player,
+                licks: gameState.licks,
+                isAngry: gameState.isAngry,
+                overfed: gameState.overfed,
+                overfedTime: gameState.overfedTime,
                 lastSave: Date.now()
             };
-            const compressed = btoa(JSON.stringify(essential));
-            // Only update if hash is empty or old
-            if (!window.location.hash || window.location.hash.includes('oldSave')) {
-                window.history.replaceState(null, '', `#save=${compressed}`);
-            }
+            const compressed = btoa(JSON.stringify(backup));
+            
+            // Always update URL hash for most recent backup
+            window.history.replaceState(null, '', `#backup=${compressed}`);
+            
+            // Also try to store in clipboard as additional backup
+            this.createClipboardBackup(backup);
         } catch (e) {
             console.error('URL backup error:', e);
+        }
+    }
+    
+    static createClipboardBackup(backup) {
+        try {
+            // Create a text backup that can be copied
+            const backupText = `DARIO-SAVE:${btoa(JSON.stringify(backup))}`;
+            
+            // Store in a hidden element for manual copying
+            let backupElement = document.getElementById('hiddenBackup');
+            if (!backupElement) {
+                backupElement = document.createElement('textarea');
+                backupElement.id = 'hiddenBackup';
+                backupElement.style.cssText = 'position:absolute;left:-9999px;top:-9999px;opacity:0;';
+                document.body.appendChild(backupElement);
+            }
+            backupElement.value = backupText;
+        } catch (e) {
+            console.error('Clipboard backup error:', e);
         }
     }
     
     static loadFromURLHash() {
         try {
             const hash = window.location.hash;
+            
+            // Try new backup format first
+            if (hash.includes('backup=')) {
+                const saveData = hash.split('backup=')[1];
+                const decompressed = JSON.parse(atob(saveData));
+                if (decompressed.lastSave && Date.now() - decompressed.lastSave < 604800000) { // 7 days
+                    console.log('Restored from URL backup!');
+                    return this.expandBackupToFullSave(decompressed);
+                }
+            }
+            
+            // Fallback to old save format
             if (hash.includes('save=')) {
                 const saveData = hash.split('save=')[1];
                 const decompressed = JSON.parse(atob(saveData));
                 if (decompressed.lastSave && Date.now() - decompressed.lastSave < 86400000) { // 24 hours
-                    return decompressed;
+                    console.log('Restored from URL save!');
+                    return this.expandBackupToFullSave(decompressed);
                 }
             }
         } catch (e) {
             console.error('URL hash restore error:', e);
         }
         return null;
+    }
+    
+    static expandBackupToFullSave(backup) {
+        // Expand the backup into a full save structure
+        const fullSave = this.createDefaultSave();
+        
+        // Restore backed up data
+        if (backup.stats) fullSave.stats = { ...fullSave.stats, ...backup.stats };
+        if (backup.currency) fullSave.currency = { ...fullSave.currency, ...backup.currency };
+        if (backup.tokens !== undefined) fullSave.tokens = backup.tokens;
+        if (backup.level !== undefined) fullSave.level = backup.level;
+        if (backup.shop) fullSave.shop = { ...fullSave.shop, ...backup.shop };
+        if (backup.player) fullSave.player = { ...fullSave.player, ...backup.player };
+        if (backup.licks !== undefined) fullSave.licks = backup.licks;
+        if (backup.isAngry !== undefined) fullSave.isAngry = backup.isAngry;
+        if (backup.overfed !== undefined) fullSave.overfed = backup.overfed;
+        if (backup.overfedTime !== undefined) fullSave.overfedTime = backup.overfedTime;
+        
+        fullSave.lastUpdateTime = backup.lastSave || Date.now();
+        
+        return fullSave;
+    }
+    
+    static generateSaveCode(gameState) {
+        // Create a compact save code for easy sharing/backup
+        const saveData = {
+            v: 5, // version
+            s: gameState.stats,
+            c: gameState.currency,
+            t: gameState.tokens,
+            l: gameState.level,
+            sh: gameState.shop,
+            p: gameState.player,
+            lk: gameState.licks,
+            a: gameState.isAngry,
+            o: gameState.overfed,
+            ot: gameState.overfedTime,
+            ts: Date.now()
+        };
+        return btoa(JSON.stringify(saveData));
+    }
+    
+    static importSaveCode(saveCode) {
+        try {
+            const data = JSON.parse(atob(saveCode));
+            if (data.v !== 5) {
+                throw new Error('Invalid save code version');
+            }
+            
+            // Convert compact format back to full save
+            const fullSave = this.createDefaultSave();
+            if (data.s) fullSave.stats = { ...fullSave.stats, ...data.s };
+            if (data.c) fullSave.currency = { ...fullSave.currency, ...data.c };
+            if (data.t !== undefined) fullSave.tokens = data.t;
+            if (data.l !== undefined) fullSave.level = data.l;
+            if (data.sh) fullSave.shop = { ...fullSave.shop, ...data.sh };
+            if (data.p) fullSave.player = { ...fullSave.player, ...data.p };
+            if (data.lk !== undefined) fullSave.licks = data.lk;
+            if (data.a !== undefined) fullSave.isAngry = data.a;
+            if (data.o !== undefined) fullSave.overfed = data.o;
+            if (data.ot !== undefined) fullSave.overfedTime = data.ot;
+            
+            fullSave.lastUpdateTime = data.ts || Date.now();
+            
+            return fullSave;
+        } catch (e) {
+            throw new Error('Invalid save code format');
+        }
     }
     
     static exportSave(gameState) {
