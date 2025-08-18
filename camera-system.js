@@ -17,8 +17,8 @@ class CameraSystem {
         this.smoothing = 0.1;
         
         // Bounds
-        this.maxX = (MAP_WIDTH - this.viewportWidth) * 24;
-        this.maxY = (MAP_HEIGHT - this.viewportHeight) * 24;
+        this.maxX = (window.MAP_WIDTH - this.viewportWidth) * 24;
+        this.maxY = (window.MAP_HEIGHT - this.viewportHeight) * 24;
     }
     
     update(playerX, playerY, deltaTime) {
@@ -72,9 +72,9 @@ class CameraSystem {
         
         return {
             startX: Math.max(0, Math.floor(this.x / tileSize)),
-            endX: Math.min(MAP_WIDTH, Math.ceil((this.x + this.viewportWidth * tileSize) / tileSize)),
+            endX: Math.min(window.MAP_WIDTH, Math.ceil((this.x + this.viewportWidth * tileSize) / tileSize)),
             startY: Math.max(0, Math.floor(this.y / tileSize)),
-            endY: Math.min(MAP_HEIGHT, Math.ceil((this.y + this.viewportHeight * tileSize) / tileSize))
+            endY: Math.min(window.MAP_HEIGHT, Math.ceil((this.y + this.viewportHeight * tileSize) / tileSize))
         };
     }
     

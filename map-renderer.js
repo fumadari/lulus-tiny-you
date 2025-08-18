@@ -365,8 +365,8 @@ class MapRenderer {
         if (window.NYC_MAP_LARGE) {
             const mapData = window.NYC_MAP_LARGE;
             // Sample some roads to add vehicles, but not too many
-            for (let y = 0; y < MAP_HEIGHT; y += 3) {
-                for (let x = 0; x < MAP_WIDTH; x += 3) {
+            for (let y = 0; y < window.MAP_HEIGHT; y += 3) {
+                for (let x = 0; x < window.MAP_WIDTH; x += 3) {
                     if (mapData[y] && mapData[y][x] === 1 && Math.random() < 0.05) { // Road tile
                         // Check that adjacent tiles aren't water
                         let validRoad = true;
@@ -433,7 +433,7 @@ class MapRenderer {
                     const newTileY = Math.floor(vehicle.y / this.tileSize);
                     
                     // Check if still on road, reverse if not
-                    if (newTileY < 0 || newTileY >= MAP_HEIGHT || 
+                    if (newTileY < 0 || newTileY >= window.MAP_HEIGHT || 
                         !mapData[newTileY] || mapData[newTileY][vehicle.tileX] !== 1) {
                         vehicle.direction *= -1;
                         vehicle.y += vehicle.speed * vehicle.direction * 2;
@@ -443,7 +443,7 @@ class MapRenderer {
                     const newTileX = Math.floor(vehicle.x / this.tileSize);
                     
                     // Check if still on road, reverse if not
-                    if (newTileX < 0 || newTileX >= MAP_WIDTH || 
+                    if (newTileX < 0 || newTileX >= window.MAP_WIDTH || 
                         !mapData[vehicle.tileY] || mapData[vehicle.tileY][newTileX] !== 1) {
                         vehicle.direction *= -1;
                         vehicle.x += vehicle.speed * vehicle.direction * 2;
@@ -648,7 +648,8 @@ class MapRenderer {
     }
     
     renderLandmarks(ctx) {
-        MAP_POIS.forEach(poi => {
+        if (!window.MAP_POIS_LARGE) return; // Safety check
+        window.MAP_POIS_LARGE.forEach(poi => {
             const x = poi.x * this.tileSize;
             const y = poi.y * this.tileSize + 40;
             
@@ -834,8 +835,14 @@ class MapRenderer {
     
     renderNPCs(ctx, camera) {
         const npcs = this.game.npcs;
-        if (!npcs || !Array.isArray(npcs)) return; // Safety check
+        if (!npcs || !Array.isArray(npcs)) {
+            console.log('No NPCs found or NPCs is not an array:', npcs);
+            return; // Safety check
+        }
         
+        // (Debug logging removed)
+        
+        // console.log(`Rendering ${npcs.length} NPCs`); // Comment out for performance
         const tileSize = this.tileSize;
         
         npcs.forEach(npc => {
@@ -849,6 +856,8 @@ class MapRenderer {
                 const screenPos = camera.worldToScreen(worldX, worldY);
                 screenX = screenPos.x;
                 screenY = screenPos.y;
+                
+                // (Debug logging removed)
                 
                 // Check if NPC is visible
                 if (screenX < -tileSize || screenX > 360 || screenY < -tileSize || screenY > 420) {
@@ -988,7 +997,7 @@ class MapRenderer {
                 // Add street light glows in world coordinates
                 for (let y = range.startY; y < range.endY; y++) {
                     for (let x = range.startX; x < range.endX; x++) {
-                        if (NYC_MAP[y] && NYC_MAP[y][x] === 1 && (x + y) % 3 === 0) { // Road tiles
+                        if (window.NYC_MAP_LARGE[y] && window.NYC_MAP_LARGE[y][x] === 1 && (x + y) % 3 === 0) { // Road tiles
                             // World coordinates
                             const worldX = x * this.tileSize + 12;
                             const worldY = y * this.tileSize + 12;
@@ -1037,7 +1046,7 @@ class MapRenderer {
         // Draw minimap tiles
         for (let y = 0; y < 15; y++) {
             for (let x = 0; x < 15; x++) {
-                const tile = NYC_MAP[y][x];
+                const tile = window.NYC_MAP_LARGE[y][x];
                 
                 switch(tile) {
                     case 0: ctx.fillStyle = '#4a7c4e'; break; // Grass
@@ -1057,15 +1066,17 @@ class MapRenderer {
         }
         
         // Draw POIs on minimap
-        MAP_POIS.forEach(poi => {
-            ctx.fillStyle = '#ffd700';
-            ctx.fillRect(
-                minimapX + poi.x * tileSize - 1,
-                minimapY + poi.y * tileSize - 1,
-                tileSize + 2,
-                tileSize + 2
-            );
-        });
+        if (window.MAP_POIS_LARGE) {
+            window.MAP_POIS_LARGE.forEach(poi => {
+                ctx.fillStyle = '#ffd700';
+                ctx.fillRect(
+                    minimapX + poi.x * tileSize - 1,
+                    minimapY + poi.y * tileSize - 1,
+                    tileSize + 2,
+                    tileSize + 2
+                );
+            });
+        }
         
         // Draw player position
         ctx.fillStyle = '#ff0000';

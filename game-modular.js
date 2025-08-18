@@ -24,6 +24,11 @@ class TamagotchiGame {
         
         // Initialize managers
         this.save = SaveManager.loadSave();
+        // For debugging: clear overfed state and reset hunger to normal
+        this.save.overfed = false;
+        if (this.save.stats.hunger > 90) {
+            this.save.stats.hunger = 80; // Reset to normal
+        }
         this.ui = new UIManager(this);
         
         // Game state
@@ -69,7 +74,7 @@ class TamagotchiGame {
         // Character/sprite state
         this.sprite = {
             x: CANVAS_WIDTH / 2,
-            y: 280,
+            y: 200, // Move Dario higher up on screen
             animation: 'idle',
             frame: 0,
             walkFrame: 0
@@ -86,6 +91,9 @@ class TamagotchiGame {
         this.minigameState = null;
         this.isDragging = false;
         
+        // Initialize NPCs
+        this.initializeNPCs();
+        
         // Initialize daily bonus
         this.checkDailyBonus();
         
@@ -94,6 +102,135 @@ class TamagotchiGame {
         
         // Hide loading screen
         this.ui.hideLoadingScreen();
+    }
+    
+    initializeNPCs() {
+        // Initialize NPCs with the requested characters
+        this.npcs = [
+            // Lulu near her apartment in Williamsburg
+            {
+                x: 47,
+                y: 40,
+                name: 'Lulu',
+                emoji: '👩‍🦰',
+                dialogue: [
+                    "Hey there, my Tiny Dario! 💕",
+                    "I love exploring Williamsburg with you!",
+                    "Want to grab some artisanal coffee? ☕",
+                    "You're the cutest pixel boyfriend ever!",
+                    "Let's go to Smorgasburg this weekend! 🍔"
+                ],
+                movePattern: 'wander',
+                moveRadius: 3
+            },
+            // Teddy - Asian friend
+            {
+                x: 22,
+                y: 32,
+                name: 'Teddy',
+                emoji: '👨‍🦱',
+                dialogue: [
+                    "Yo Dario! What's good bro?",
+                    "Want to grab some ramen? 🍜",
+                    "Did you see that new tech startup?",
+                    "Let's hit up K-town later!",
+                    "Bro, you're looking fresh today!"
+                ],
+                movePattern: 'wander',
+                moveRadius: 2
+            },
+            // Cat in Central Park
+            {
+                x: 22,
+                y: 17,
+                name: 'Whiskers',
+                emoji: '🐱',
+                dialogue: [
+                    "*purrs contentedly*",
+                    "Meow! 😸",
+                    "*rubs against your leg*",
+                    "*stretches and yawns*",
+                    "*chases a butterfly*"
+                ],
+                movePattern: 'lazy',
+                moveRadius: 1
+            },
+            // Girl with crush #1 - Near Times Square
+            {
+                x: 23,
+                y: 33,
+                name: 'Ashley',
+                emoji: '👱‍♀️',
+                dialogue: [
+                    "OMG is that Dario? You're so cute! 😊",
+                    "I follow you on everything! You're amazing!",
+                    "Can we take a selfie together? Please?",
+                    "You're literally perfect! 💖",
+                    "I told all my friends about you!"
+                ],
+                movePattern: 'pace',
+                moveRadius: 2
+            },
+            // Girl with crush #2 - Upper East Side (RIGHT next to spawn point)
+            {
+                x: 24,
+                y: 16,
+                name: 'Madison',
+                emoji: '👩',
+                dialogue: [
+                    "Hey Dario! Fancy seeing you here! 😍",
+                    "You always brighten my day!",
+                    "I made you cookies! Want some? 🍪",
+                    "You're so smart and handsome!",
+                    "Maybe we could study together sometime?"
+                ],
+                movePattern: 'wander',
+                moveRadius: 2
+            },
+            // Girl with crush #3 - Greenwich Village
+            {
+                x: 19,
+                y: 48,
+                name: 'Zoe',
+                emoji: '👩‍🦱',
+                dialogue: [
+                    "Dario! I was just thinking about you!",
+                    "You're like, totally my type! 🌟",
+                    "Want to check out this art gallery with me?",
+                    "I wrote a poem about you... 📝",
+                    "You have the most amazing energy!"
+                ],
+                movePattern: 'stationary'
+            },
+            // Joshua Block - TikTok influencer who loves liquor
+            {
+                x: 16,
+                y: 40,
+                name: 'Joshua Block',
+                emoji: '🕺',
+                dialogue: [
+                    "Yo! It's ya boy Joshua Block! 🥃",
+                    "Just tried this SICK new whiskey, bro!",
+                    "Follow me on TikTok for liquor reviews! 📱",
+                    "This bourbon hits different! No cap! 🔥",
+                    "Let's do shots! Content baby! 🎬",
+                    "Did someone say happy hour? 🍺"
+                ],
+                movePattern: 'wander',
+                moveRadius: 4
+            }
+        ];
+        
+        // Initialize NPC positions and states
+        this.npcs.forEach(npc => {
+            npc.currentX = npc.x;
+            npc.currentY = npc.y;
+            npc.facing = 'down';
+            npc.moveTimer = Math.random() * 120;
+            npc.dialogueIndex = 0;
+        });
+        
+        console.log(`Initialized ${this.npcs.length} NPCs`);
     }
     
     checkDailyBonus() {
@@ -147,6 +284,7 @@ class TamagotchiGame {
             case 'map':
                 this.mapRenderer.update(deltaTime);
                 this.camera.update(this.save.player.x, this.save.player.y, deltaTime);
+                this.updateNPCs();
                 break;
         }
         
@@ -175,6 +313,11 @@ class TamagotchiGame {
         this.save.stats.hunger = Math.max(0, this.save.stats.hunger - STATS_CONFIG.DECAY_RATES.HUNGER * decayFactor);
         this.save.stats.energy = Math.max(0, this.save.stats.energy - STATS_CONFIG.DECAY_RATES.ENERGY * decayFactor);
         this.save.stats.happiness = Math.max(0, this.save.stats.happiness - STATS_CONFIG.DECAY_RATES.HAPPINESS * decayFactor);
+        
+        // Clear overfed state when hunger drops below 90
+        if (this.save.overfed && this.save.stats.hunger <= 90) {
+            this.save.overfed = false;
+        }
         
         // Update pet state based on stats
         const avgStat = (this.save.stats.hunger + this.save.stats.energy + this.save.stats.happiness) / 3;
@@ -301,7 +444,7 @@ class TamagotchiGame {
         }
         
         // Draw character
-        this.drawCharacter(this.sprite.x, this.sprite.y);
+        this.drawCharacter(this.sprite.x, this.sprite.y, 20.0); // Make Dario GIGANTIC - 10 times as tall
         
         // Status bubbles
         if (this.save.stats.hunger < 30) {
@@ -324,10 +467,20 @@ class TamagotchiGame {
     }
     
     renderMinigame() {
+        console.log('Rendering minigame:', this.currentMinigame);
         if (this.currentMinigame === 'feedFrenzy') {
             this.minigames.feedFrenzy.render();
         } else if (this.currentMinigame === 'danceBattle' && this.danceBattle) {
             this.danceBattle.render();
+        } else {
+            // Fallback: clear screen and show message
+            this.ctx.fillStyle = '#000';
+            this.ctx.fillRect(0, 0, 360, 420);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = '20px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`Minigame: ${this.currentMinigame}`, 180, 210);
+            this.ctx.fillText('Press ESC to exit', 180, 240);
         }
     }
     
@@ -344,76 +497,152 @@ class TamagotchiGame {
     drawCharacter(x, y, scale = 2) {
         const bobY = y + Math.sin(this.frameCount * 0.05) * 3;
         
-        // Shadow
+        // Check if overfed for chubby appearance
+        const isChubby = this.save.overfed || false;
+        const chubbyScaleW = isChubby ? 1.4 : 1.0; // 40% wider when chubby
+        const chubbyScaleH = isChubby ? 1.2 : 1.0; // 20% taller when chubby (rounder)
+        
+        // Shadow (bigger when chubby)
         this.ctx.fillStyle = 'rgba(0,0,0,0.2)';
         this.ctx.beginPath();
-        this.ctx.ellipse(x, y + 30, 15 * scale/2, 5 * scale/2, 0, 0, Math.PI * 2);
+        this.ctx.ellipse(x, y + 30, 15 * scale/2 * chubbyScaleW, 5 * scale/2, 0, 0, Math.PI * 2);
         this.ctx.fill();
         
         // Determine mood
         const mood = this.save.stats.happiness > 70 ? 'happy' : 
                      this.save.stats.happiness < 30 ? 'sad' : 'normal';
         
-        // Body
-        this.ctx.fillStyle = '#4169E1';
-        this.ctx.fillRect(x - 8*scale, bobY - 5*scale, 16*scale, 15*scale);
+        // Debug: log happiness and mood occasionally
+        if (this.frameCount % 300 === 0) {
+            console.log(`Happiness: ${this.save.stats.happiness}, Mood: ${mood}`);
+        }
         
-        // Arms
+        // DEBUG: Show mood on screen
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = '12px monospace';
+        this.ctx.fillText(`H:${Math.round(this.save.stats.happiness)} M:${mood}`, 10, 380);
+        this.ctx.fillStyle = '#000';
+        
+        // Body (circular when chubby, rectangular when normal)
+        this.ctx.fillStyle = '#4169E1';
+        const bodyWidth = 16 * scale * chubbyScaleW;
+        const bodyHeight = 15 * scale * chubbyScaleH;
+        
+        if (isChubby) {
+            // Draw circular belly when chubby
+            this.ctx.beginPath();
+            this.ctx.ellipse(x, bobY + 2*scale, bodyWidth/2, bodyHeight/2, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else {
+            // Normal rectangular body
+            this.ctx.fillRect(x - bodyWidth/2, bobY - 5*scale, bodyWidth, bodyHeight);
+        }
+        
+        // Arms (positioned for chubby body)
         this.ctx.fillStyle = '#FDBCB4';
         const armOffset = Math.sin(this.sprite.frame) * 2;
-        this.ctx.fillRect(x - 12*scale, bobY - 3*scale + armOffset, 4*scale, 10*scale);
-        this.ctx.fillRect(x + 8*scale, bobY - 3*scale - armOffset, 4*scale, 10*scale);
+        const armPosX = 8 * scale * chubbyScaleW + 4 * scale; // Arms moved out for wider body
+        this.ctx.fillRect(x - armPosX, bobY - 3*scale + armOffset, 4*scale, 10*scale);
+        this.ctx.fillRect(x + armPosX - 4*scale, bobY - 3*scale - armOffset, 4*scale, 10*scale);
         
-        // Head
-        this.ctx.fillRect(x - 10*scale, bobY - 20*scale, 20*scale, 18*scale);
+        // Head (circular when chubby, rectangular when normal)
+        const headWidth = 20 * scale * chubbyScaleW;
+        const headHeight = 18 * scale * chubbyScaleH;
         
-        // Hair
+        if (isChubby) {
+            // Draw circular face when chubby
+            this.ctx.beginPath();
+            this.ctx.ellipse(x, bobY - 11*scale, headWidth/2, headHeight/2, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else {
+            // Normal rectangular head
+            this.ctx.fillRect(x - headWidth/2, bobY - 20*scale, headWidth, headHeight);
+        }
+        
+        // Hair (matches head shape)
         this.ctx.fillStyle = '#8B4513';
-        this.ctx.fillRect(x - 10*scale, bobY - 20*scale, 20*scale, 8*scale);
+        if (isChubby) {
+            // Circular hair for round head
+            this.ctx.beginPath();
+            this.ctx.ellipse(x, bobY - 15*scale, headWidth/2, headHeight/3, 0, 0, Math.PI, true);
+            this.ctx.fill();
+        } else {
+            // Rectangular hair for normal head
+            this.ctx.fillRect(x - headWidth/2, bobY - 20*scale, headWidth, 8*scale);
+        }
         
-        // Eyes
-        this.ctx.fillStyle = '#000';
+        // Eyes (adjusted for chubby face)
         if (this.sprite.animation !== 'sleep') {
-            // Blinking
-            const blink = this.frameCount % 120 < 5;
-            if (!blink) {
-                this.ctx.fillRect(x - 6*scale, bobY - 12*scale, 3*scale, 3*scale);
-                this.ctx.fillRect(x + 3*scale, bobY - 12*scale, 3*scale, 3*scale);
+            const eyeSpacing = 6 * scale * chubbyScaleW;
+            
+            if (this.save.stats.happiness >= 100) {
+                // Heart eyes at 100% happiness!
+                this.ctx.fillStyle = '#FF69B4';
+                this.ctx.font = `${Math.round(8*scale)}px serif`;
+                this.ctx.fillText('💖', x - eyeSpacing - 2*scale, bobY - 8*scale);
+                this.ctx.fillText('💖', x + eyeSpacing - 5*scale, bobY - 8*scale);
+                this.ctx.fillStyle = '#000';
             } else {
-                this.ctx.fillRect(x - 6*scale, bobY - 10*scale, 3*scale, 1*scale);
-                this.ctx.fillRect(x + 3*scale, bobY - 10*scale, 3*scale, 1*scale);
+                // Normal eyes with blinking
+                this.ctx.fillStyle = '#000';
+                const blink = this.frameCount % 120 < 5;
+                if (!blink) {
+                    this.ctx.fillRect(x - eyeSpacing, bobY - 12*scale, 3*scale, 3*scale);
+                    this.ctx.fillRect(x + eyeSpacing - 3*scale, bobY - 12*scale, 3*scale, 3*scale);
+                } else {
+                    this.ctx.fillRect(x - eyeSpacing, bobY - 10*scale, 3*scale, 1*scale);
+                    this.ctx.fillRect(x + eyeSpacing - 3*scale, bobY - 10*scale, 3*scale, 1*scale);
+                }
             }
         } else {
             // Sleeping Z's
             this.ctx.font = '12px monospace';
-            this.ctx.fillText('Z', x + 12*scale, bobY - 15*scale);
+            this.ctx.fillText('Z', x + 12*scale*chubbyScaleW, bobY - 15*scale);
             this.ctx.font = '10px monospace';
-            this.ctx.fillText('z', x + 18*scale, bobY - 20*scale);
+            this.ctx.fillText('z', x + 18*scale*chubbyScaleW, bobY - 20*scale);
         }
         
         // Mouth based on mood
+        this.ctx.fillStyle = '#000'; // Black for mouth
         if (mood === 'happy') {
-            this.ctx.fillRect(x - 4*scale, bobY - 6*scale, 8*scale, 1*scale);
-            this.ctx.fillRect(x - 5*scale, bobY - 5*scale, 2*scale, 1*scale);
-            this.ctx.fillRect(x + 3*scale, bobY - 5*scale, 2*scale, 1*scale);
+            // Happy smile - clear upside down arch
+            if (this.frameCount % 300 === 0) console.log('Drawing happy mouth');
+            // Bottom of smile (main horizontal line)
+            this.ctx.fillRect(x - 5*scale, bobY - 4*scale, 10*scale, 2*scale);
+            // Left side curves up
+            this.ctx.fillRect(x - 6*scale, bobY - 5*scale, 2*scale, 1*scale);
+            this.ctx.fillRect(x - 7*scale, bobY - 6*scale, 2*scale, 1*scale);
+            // Right side curves up  
+            this.ctx.fillRect(x + 4*scale, bobY - 5*scale, 2*scale, 1*scale);
+            this.ctx.fillRect(x + 5*scale, bobY - 6*scale, 2*scale, 1*scale);
         } else if (mood === 'sad') {
-            this.ctx.fillRect(x - 4*scale, bobY - 4*scale, 8*scale, 1*scale);
+            // Sad frown - curves downward  
+            if (this.frameCount % 300 === 0) console.log('Drawing sad mouth');
+            // Top of frown (main horizontal line)
+            this.ctx.fillRect(x - 4*scale, bobY - 6*scale, 8*scale, 2*scale);
+            // Left side curves down
             this.ctx.fillRect(x - 5*scale, bobY - 5*scale, 2*scale, 1*scale);
+            this.ctx.fillRect(x - 6*scale, bobY - 4*scale, 2*scale, 1*scale);
+            // Right side curves down
             this.ctx.fillRect(x + 3*scale, bobY - 5*scale, 2*scale, 1*scale);
+            this.ctx.fillRect(x + 4*scale, bobY - 4*scale, 2*scale, 1*scale);
         } else {
-            this.ctx.fillRect(x - 3*scale, bobY - 6*scale, 6*scale, 1*scale);
+            // Neutral mouth - straight line
+            if (this.frameCount % 300 === 0) console.log('Drawing neutral mouth');
+            this.ctx.fillRect(x - 3*scale, bobY - 5*scale, 6*scale, 2*scale);
         }
         
-        // Legs
+        // Legs (positioned for chubby body)
         this.ctx.fillStyle = '#333';
         const legOffset = this.isMoving ? Math.sin(this.sprite.walkFrame * 2) * 2 : 0;
-        this.ctx.fillRect(x - 7*scale, bobY + 10*scale, 5*scale, 8*scale + Math.abs(legOffset));
-        this.ctx.fillRect(x + 2*scale, bobY + 10*scale, 5*scale, 8*scale - Math.abs(legOffset));
+        const legSpacing = 7 * scale * chubbyScaleW;
+        this.ctx.fillRect(x - legSpacing, bobY + 10*scale, 5*scale, 8*scale + Math.abs(legOffset));
+        this.ctx.fillRect(x + legSpacing - 5*scale, bobY + 10*scale, 5*scale, 8*scale - Math.abs(legOffset));
         
-        // Shoes
+        // Shoes (positioned for chubby legs)
         this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(x - 8*scale, bobY + 16*scale + Math.abs(legOffset), 7*scale, 4*scale);
-        this.ctx.fillRect(x + 1*scale, bobY + 16*scale - Math.abs(legOffset), 7*scale, 4*scale);
+        this.ctx.fillRect(x - legSpacing - scale, bobY + 16*scale + Math.abs(legOffset), 7*scale, 4*scale);
+        this.ctx.fillRect(x + legSpacing - 6*scale, bobY + 16*scale - Math.abs(legOffset), 7*scale, 4*scale);
     }
     
     drawSpeechBubble(x, y, text) {
@@ -470,7 +699,14 @@ class TamagotchiGame {
         this.sprite.animation = 'eat';
         this.sound.play('eat');
         this.addParticles(this.sprite.x, this.sprite.y, '#FFD700', 10);
-        this.ui.showNotification('Yummy! 🍎');
+        
+        // Check for overfeeding
+        if (this.save.stats.hunger > 90) {
+            this.save.overfed = true;
+            this.ui.showNotification('Oof! So full! 🤤');
+        } else {
+            this.ui.showNotification('Yummy! 🍎');
+        }
         
         setTimeout(() => {
             this.sprite.animation = 'idle';
@@ -480,7 +716,9 @@ class TamagotchiGame {
     pet() {
         if (this.currentScreen !== 'main') return;
         
+        const oldHappiness = this.save.stats.happiness;
         this.save.stats.happiness = Math.min(100, this.save.stats.happiness + STATS_CONFIG.INCREASE_AMOUNTS.PET);
+        console.log(`Pet action: happiness ${oldHappiness} -> ${this.save.stats.happiness}`);
         this.save.stats.energy = Math.min(100, this.save.stats.energy + 5);
         this.sprite.animation = 'happy';
         this.sound.play('pet');
@@ -540,14 +778,51 @@ class TamagotchiGame {
         }
         
         this.camera.jumpTo(this.save.player.x, this.save.player.y);  // Center camera on player
-        this.showNotification("Let's explore NYC! 🗽 Use WASD/Arrows! (ESC to exit)");
+        this.showNotification("Let's explore NYC! 🗽 Use WASD/Arrows!");
+        
+        // Show map back button
+        const backButton = document.getElementById('mapBackButton');
+        if (backButton) {
+            backButton.style.display = 'block';
+        }
+        
         console.log(`Map opened - Player at: (${this.save.player.x}, ${this.save.player.y})`);
     }
     
+    exitMap() {
+        this.currentScreen = 'main';
+        
+        // Hide map back button
+        const backButton = document.getElementById('mapBackButton');
+        if (backButton) {
+            backButton.style.display = 'none';
+        }
+        
+        this.showNotification("Welcome home! 🏠");
+    }
+    
     startMinigame(gameType) {
+        // Check if this is a "coming soon" game
+        if (['petRhythm', 'memory', 'trivia'].includes(gameType)) {
+            const gameNames = {
+                'petRhythm': '🎵 Pet Rhythm',
+                'memory': '🧠 Memory Game',
+                'trivia': '❓ Trivia Game'
+            };
+            this.showNotification(`${gameNames[gameType]} - Coming Soon!`);
+            this.ui.toggleMenu(); // Just close the menu
+            return;
+        }
+        
         this.currentMinigame = gameType;
         this.currentScreen = 'minigame';
         this.sound.play('gameStart');
+        
+        // Show minigame back button
+        const backButton = document.getElementById('minigameBackButton');
+        if (backButton) {
+            backButton.style.display = 'block';
+        }
         
         switch(gameType) {
             case 'feedFrenzy':
@@ -561,6 +836,10 @@ class TamagotchiGame {
                 this.danceBattle.init();
                 this.minigameState = this.danceBattle.state;
                 break;
+            default:
+                this.showNotification(`${gameType} - Coming Soon!`);
+                this.endMinigame(); // Go back to main screen
+                return;
         }
         
         this.ui.toggleMenu();
@@ -570,7 +849,15 @@ class TamagotchiGame {
         this.currentScreen = 'main';
         this.currentMinigame = null;
         this.minigameState = null;
+        
+        // Hide minigame back button
+        const backButton = document.getElementById('minigameBackButton');
+        if (backButton) {
+            backButton.style.display = 'none';
+        }
+        
         SaveManager.saveNow(this.save);
+        this.showNotification("Back to main screen! 🏠");
     }
     
     // Menu functions
@@ -652,7 +939,10 @@ class TamagotchiGame {
         if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT) {
             // Check if tile is walkable
             const tile = NYC_MAP[newY][newX];
-            if (tile !== '#' && tile !== '~' && tile !== '^') {  // Not building, water, or mountain
+            // Walkable tiles: 0 (grass), 1 (road), 4 (park path), 5 (bridge), 6 (subway), 7 (plaza)
+            // Non-walkable tiles: 2 (building), 3 (water), 8 (residential), 9 (commercial)
+            const walkableTiles = [0, 1, 4, 5, 6, 7];
+            if (walkableTiles.includes(tile)) {
                 this.save.player.x = newX;
                 this.save.player.y = newY;
                 
@@ -668,12 +958,118 @@ class TamagotchiGame {
                 // Check for POI interactions
                 this.checkPOIInteraction();
                 
+                // Check for NPC interactions
+                this.checkNPCInteraction();
+                
                 // Debug log
                 console.log(`Player moved to: ${this.save.player.x}, ${this.save.player.y}`);
             } else {
                 console.log(`Blocked tile at: ${newX}, ${newY} - tile: ${tile}`);
             }
         }
+    }
+    
+    updateNPCs() {
+        this.npcs.forEach(npc => {
+            npc.moveTimer--;
+            
+            if (npc.moveTimer <= 0) {
+                // Reset timer
+                npc.moveTimer = 60 + Math.random() * 120; // Move every 1-3 seconds
+                
+                // Move based on pattern
+                if (npc.movePattern === 'wander' && npc.moveRadius) {
+                    const directions = [
+                        {dx: 0, dy: -1, facing: 'up'},
+                        {dx: 0, dy: 1, facing: 'down'},
+                        {dx: -1, dy: 0, facing: 'left'},
+                        {dx: 1, dy: 0, facing: 'right'}
+                    ];
+                    const dir = directions[Math.floor(Math.random() * directions.length)];
+                    const newX = npc.currentX + dir.dx;
+                    const newY = npc.currentY + dir.dy;
+                    
+                    // Check if within radius and not colliding
+                    const distFromHome = Math.abs(newX - npc.x) + Math.abs(newY - npc.y);
+                    if (distFromHome <= npc.moveRadius && 
+                        newX >= 0 && newX < MAP_WIDTH && 
+                        newY >= 0 && newY < MAP_HEIGHT) {
+                        const tile = NYC_MAP[newY][newX];
+                        // Check walkable tiles
+                        const walkableTiles = [0, 1, 4, 5, 6, 7];
+                        if (walkableTiles.includes(tile)) {
+                            // Check player collision
+                            if (newX !== this.save.player.x || newY !== this.save.player.y) {
+                                npc.currentX = newX;
+                                npc.currentY = newY;
+                                npc.facing = dir.facing;
+                            }
+                        }
+                    }
+                } else if (npc.movePattern === 'pace' && npc.moveRadius) {
+                    // Pace back and forth
+                    if (!npc.paceDirection) npc.paceDirection = 1;
+                    const newX = npc.currentX + npc.paceDirection;
+                    
+                    if (Math.abs(newX - npc.x) > npc.moveRadius || 
+                        newX < 0 || newX >= MAP_WIDTH ||
+                        !NYC_MAP[npc.currentY] || !NYC_MAP[npc.currentY][newX] ||
+                        ![0, 1, 4, 5, 6, 7].includes(NYC_MAP[npc.currentY][newX])) {
+                        npc.paceDirection *= -1;
+                    } else if (newX !== this.save.player.x || npc.currentY !== this.save.player.y) {
+                        npc.currentX = newX;
+                        npc.facing = npc.paceDirection > 0 ? 'right' : 'left';
+                    }
+                } else if (npc.movePattern === 'lazy') {
+                    // Rarely move
+                    if (Math.random() < 0.1) {
+                        const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
+                        const dir = directions[Math.floor(Math.random() * directions.length)];
+                        const newX = npc.currentX + dir.dx;
+                        const newY = npc.currentY + dir.dy;
+                        
+                        if (Math.abs(newX - npc.x) <= 1 && Math.abs(newY - npc.y) <= 1 &&
+                            newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT) {
+                            const tile = NYC_MAP[newY][newX];
+                            if ([0, 1, 4, 5, 6, 7].includes(tile) &&
+                                (newX !== this.save.player.x || newY !== this.save.player.y)) {
+                                npc.currentX = newX;
+                                npc.currentY = newY;
+                            }
+                        }
+                    }
+                }
+                // stationary NPCs don't move
+            }
+        });
+    }
+    
+    checkNPCInteraction() {
+        // Check if player is near any NPC
+        this.npcs.forEach(npc => {
+            const dist = Math.abs(this.save.player.x - npc.currentX) + Math.abs(this.save.player.y - npc.currentY);
+            if (dist <= 1) {
+                // Show dialogue
+                const dialogue = npc.dialogue[npc.dialogueIndex];
+                this.showNotification(`${npc.name}: ${dialogue}`);
+                
+                // Cycle through dialogue
+                npc.dialogueIndex = (npc.dialogueIndex + 1) % npc.dialogue.length;
+                
+                // Special interactions
+                if (npc.name === 'Lulu') {
+                    // Lulu gives extra hearts
+                    this.save.currency.hearts += 5;
+                    this.save.stats.happiness = Math.min(100, this.save.stats.happiness + 10);
+                } else if (npc.name === 'Whiskers') {
+                    // Cat interaction
+                    this.sound.play('pet');
+                } else if (npc.name.includes('Ashley') || npc.name.includes('Madison') || npc.name.includes('Zoe')) {
+                    // Girls with crushes boost happiness
+                    this.save.stats.happiness = Math.min(100, this.save.stats.happiness + 5);
+                }
+            }
+        });
     }
     
     checkPOIInteraction() {
@@ -708,15 +1104,23 @@ window.addEventListener('DOMContentLoaded', () => {
         window.game.handleClick(clickEvent);
     });
     
-    // Keyboard controls for map movement
+    // Keyboard controls
     document.addEventListener('keydown', (e) => {
-        if (window.game.currentScreen === 'map') {
+        if (window.game.currentScreen === 'minigame') {
+            const key = e.key.toLowerCase();
+            
+            // ESC to exit minigame
+            if (key === 'escape') {
+                window.game.endMinigame();
+                e.preventDefault();
+                return;
+            }
+        } else if (window.game.currentScreen === 'map') {
             const key = e.key.toLowerCase();
             
             // ESC to exit map
             if (key === 'escape') {
-                window.game.currentScreen = 'main';
-                window.game.showNotification("Back home!");
+                window.game.exitMap();
                 e.preventDefault();
                 return;
             }
