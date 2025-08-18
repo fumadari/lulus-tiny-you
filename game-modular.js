@@ -92,6 +92,7 @@ class TamagotchiGame {
         this.currentMinigame = null;
         this.minigameState = null;
         this.isDragging = false;
+        this.apartmentPromptShown = false;
         
         // Initialize NPCs
         this.initializeNPCs();
@@ -308,6 +309,9 @@ class TamagotchiGame {
                 this.camera.update(this.save.player.x, this.save.player.y, deltaTime);
                 this.updateNPCs();
                 break;
+            case 'apartment':
+                this.updateApartment(deltaTime);
+                break;
         }
         
         // Update particles
@@ -382,6 +386,16 @@ class TamagotchiGame {
         }
     }
     
+    updateApartment(deltaTime) {
+        // Simple apartment update - just basic animations
+        this.animationTimer += deltaTime;
+        if (this.animationTimer > 500) {
+            this.animationTimer = 0;
+            this.animationFrame = (this.animationFrame + 1) % 2;
+            this.sprite.frame = (this.sprite.frame + 1) % 2;
+        }
+    }
+    
     updateParticles(deltaTime) {
         this.particles = this.particles.filter(particle => {
             particle.life -= deltaTime;
@@ -407,6 +421,9 @@ class TamagotchiGame {
                 break;
             case 'map':
                 this.renderMap();
+                break;
+            case 'apartment':
+                this.renderApartment();
                 break;
         }
         
@@ -506,6 +523,80 @@ class TamagotchiGame {
             this.camera,
             NYC_MAP
         );
+    }
+    
+    renderApartment() {
+        // Clear background with warm bedroom color
+        this.ctx.fillStyle = '#2c1810'; // Warm dark brown
+        this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        
+        // Draw bedroom elements
+        this.drawBedroomBackground();
+        this.drawBedroomFurniture();
+        
+        // Draw Dario in the bedroom
+        this.drawCharacter(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 50, 4.0);
+        
+        // Bedroom status bubbles
+        if (this.save.stats.hunger < 30) {
+            this.drawSpeechBubble(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10, "Can we get food from Lulu's kitchen? 🍎");
+        } else if (this.save.stats.energy < 30) {
+            this.drawSpeechBubble(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10, "This bed looks comfy... 😴");
+        } else if (this.save.stats.happiness > 70) {
+            this.drawSpeechBubble(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10, "I love being here with Lulu! 💕");
+        }
+    }
+    
+    drawBedroomBackground() {
+        // Draw wooden floor
+        this.ctx.fillStyle = '#8B4513';
+        this.ctx.fillRect(0, CANVAS_HEIGHT - 100, CANVAS_WIDTH, 100);
+        
+        // Draw wall
+        this.ctx.fillStyle = '#F5DEB3';
+        this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT - 100);
+        
+        // Draw window
+        this.ctx.fillStyle = '#87CEEB';
+        this.ctx.fillRect(50, 50, 100, 80);
+        this.ctx.strokeStyle = '#8B4513';
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeRect(50, 50, 100, 80);
+        
+        // Window cross
+        this.ctx.beginPath();
+        this.ctx.moveTo(100, 50);
+        this.ctx.lineTo(100, 130);
+        this.ctx.moveTo(50, 90);
+        this.ctx.lineTo(150, 90);
+        this.ctx.stroke();
+    }
+    
+    drawBedroomFurniture() {
+        // Draw bed
+        this.ctx.fillStyle = '#4A4A4A';
+        this.ctx.fillRect(250, CANVAS_HEIGHT - 150, 100, 80);
+        
+        // Bed pillows
+        this.ctx.fillStyle = '#FFB6C1';
+        this.ctx.fillRect(260, CANVAS_HEIGHT - 140, 30, 20);
+        this.ctx.fillRect(300, CANVAS_HEIGHT - 140, 30, 20);
+        
+        // Draw dresser
+        this.ctx.fillStyle = '#8B4513';
+        this.ctx.fillRect(20, CANVAS_HEIGHT - 120, 60, 50);
+        
+        // Dresser handles
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.fillRect(35, CANVAS_HEIGHT - 100, 8, 4);
+        this.ctx.fillRect(55, CANVAS_HEIGHT - 100, 8, 4);
+        
+        // Draw heart decorations on wall
+        this.ctx.font = '20px serif';
+        this.ctx.fillStyle = '#FF69B4';
+        this.ctx.fillText('💕', 200, 100);
+        this.ctx.fillText('💕', 300, 80);
+        this.ctx.fillText('💕', 150, 120);
     }
     
     renderMinigame() {
@@ -1309,6 +1400,11 @@ The better you care for him, the happier he'll be!
                     this.save.currency.hearts += 10;
                     this.sound.play('discover');
                 }
+                
+                // Special interaction for Lulu's apartment
+                if (poi.id === "lulu_home" && dist <= 1) {
+                    this.showEnterApartmentPrompt();
+                }
             }
         }
     }
@@ -1340,6 +1436,76 @@ The better you care for him, the happier he'll be!
         }
         
         this.save.lastUpdateTime = now;
+    }
+    
+    // ===== APARTMENT INTERACTION =====
+    
+    showEnterApartmentPrompt() {
+        // Only show prompt once per visit to avoid spam
+        if (!this.apartmentPromptShown) {
+            this.apartmentPromptShown = true;
+            this.ui.showModal(
+                "Lulu's Apartment 💕",
+                "You're at Lulu's door! Would you like to enter?",
+                [
+                    { text: "Enter 🚪", action: () => this.enterApartment() },
+                    { text: "Stay Outside", action: () => this.ui.closeModal() }
+                ]
+            );
+        }
+    }
+    
+    enterApartment() {
+        this.currentScreen = 'apartment';
+        this.ui.closeModal();
+        this.ui.showNotification("Welcome to Lulu's cozy bedroom! 💕✨");
+        
+        // Hide map back button, show apartment exit button
+        const mapBackButton = document.getElementById('mapBackButton');
+        if (mapBackButton) mapBackButton.style.display = 'none';
+        
+        // Show apartment exit button
+        this.showApartmentExitButton();
+    }
+    
+    exitApartment() {
+        this.currentScreen = 'map';
+        this.apartmentPromptShown = false; // Reset for next visit
+        this.ui.showNotification("Back outside Lulu's apartment 🏠");
+        
+        // Hide apartment exit button, show map back button
+        this.hideApartmentExitButton();
+        const mapBackButton = document.getElementById('mapBackButton');
+        if (mapBackButton) mapBackButton.style.display = 'block';
+    }
+    
+    showApartmentExitButton() {
+        let exitButton = document.getElementById('apartmentExitButton');
+        if (!exitButton) {
+            exitButton = document.createElement('div');
+            exitButton.id = 'apartmentExitButton';
+            exitButton.className = 'apartment-exit-button';
+            exitButton.style.cssText = `
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                pointer-events: auto;
+                z-index: 15;
+            `;
+            exitButton.innerHTML = `
+                <button class="control-btn" onclick="game.exitApartment()" style="background: linear-gradient(135deg, #e74c3c, #c0392b); min-width: 70px;">
+                    <div class="icon">🚪</div>
+                    EXIT
+                </button>
+            `;
+            document.querySelector('.ui-overlay').appendChild(exitButton);
+        }
+        exitButton.style.display = 'block';
+    }
+    
+    hideApartmentExitButton() {
+        const exitButton = document.getElementById('apartmentExitButton');
+        if (exitButton) exitButton.style.display = 'none';
     }
     
     checkCriticalStats(oldHunger, oldEnergy, oldHappiness) {
