@@ -24,13 +24,12 @@ class TamagotchiGame {
         
         // Initialize managers
         this.save = SaveManager.loadSave();
-        // For debugging: clear overfed state and reset stats
+        
+        // Apply offline time decay before starting
+        this.applyOfflineDecay();
+        
+        // For debugging: clear overfed state
         this.save.overfed = false;
-        if (this.save.stats.hunger > 90) {
-            this.save.stats.hunger = 80; // Reset to normal
-        }
-        // Debug: refresh energy
-        this.save.stats.energy = 100;
         this.ui = new UIManager(this);
         
         // Game state
@@ -1302,6 +1301,35 @@ The better you care for him, the happier he'll be!
                 }
             }
         }
+    }
+    
+    // ===== OFFLINE & TIME MANAGEMENT =====
+    
+    applyOfflineDecay() {
+        const now = Date.now();
+        const lastUpdate = this.save.lastUpdateTime || now;
+        const minutesAway = Math.floor((now - lastUpdate) / 60000);
+        
+        if (minutesAway > 0) {
+            // Stats decay while away (capped to not be too harsh)
+            const hungerDecay = Math.min(50, minutesAway * 0.5); // 0.5 per minute
+            const energyDecay = Math.min(40, minutesAway * 0.3); // 0.3 per minute  
+            const happyDecay = Math.min(30, minutesAway * 0.2);  // 0.2 per minute
+            
+            this.save.stats.hunger = Math.max(0, this.save.stats.hunger - hungerDecay);
+            this.save.stats.energy = Math.max(0, this.save.stats.energy - energyDecay);
+            this.save.stats.happiness = Math.max(0, this.save.stats.happiness - happyDecay);
+            
+            // Show appropriate welcome back messages
+            if (minutesAway > 60) {
+                console.log(`Away for ${minutesAway} minutes - showing missed you message`);
+                setTimeout(() => this.ui.showNotification("I missed you so much! 🥺"), 1000);
+            } else if (minutesAway > 30) {
+                setTimeout(() => this.ui.showNotification("You're back! I was getting lonely! 💕"), 1000);
+            }
+        }
+        
+        this.save.lastUpdateTime = now;
     }
 }
 
