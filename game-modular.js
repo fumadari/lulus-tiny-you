@@ -36,6 +36,7 @@ class TamagotchiGame {
         // Game state
         this.currentScreen = 'main';  // Use string like original
         this.lastUpdateTime = Date.now();
+        this.lastStatsSave = 0; // Track when stats were last saved
         this.frameCount = 0;
         this.particles = [];
         
@@ -332,6 +333,10 @@ class TamagotchiGame {
         
         // Decay stats
         const decayFactor = deltaTime / 60000; // Per minute
+        const oldHunger = this.save.stats.hunger;
+        const oldEnergy = this.save.stats.energy;
+        const oldHappiness = this.save.stats.happiness;
+        
         this.save.stats.hunger = Math.max(0, this.save.stats.hunger - STATS_CONFIG.DECAY_RATES.HUNGER * decayFactor);
         this.save.stats.energy = Math.max(0, this.save.stats.energy - STATS_CONFIG.DECAY_RATES.ENERGY * decayFactor);
         this.save.stats.happiness = Math.max(0, this.save.stats.happiness - STATS_CONFIG.DECAY_RATES.HAPPINESS * decayFactor);
@@ -339,6 +344,18 @@ class TamagotchiGame {
         // Clear overfed state when hunger drops below 90
         if (this.save.overfed && this.save.stats.hunger <= 90) {
             this.save.overfed = false;
+        }
+        
+        // Save stats if they changed significantly (every ~5 seconds worth of decay)
+        const statsChanged = (
+            Math.abs(oldHunger - this.save.stats.hunger) > 0.5 ||
+            Math.abs(oldEnergy - this.save.stats.energy) > 0.5 ||
+            Math.abs(oldHappiness - this.save.stats.happiness) > 0.5
+        );
+        
+        if (statsChanged || (Date.now() - this.lastStatsSave) > 30000) {
+            this.lastStatsSave = Date.now();
+            SaveManager.saveNow(this.save);
         }
         
         // Update pet state based on stats
