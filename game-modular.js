@@ -28,8 +28,8 @@ class TamagotchiGame {
         // Apply offline time decay before starting
         this.applyOfflineDecay();
         
-        // For debugging: clear overfed state
-        this.save.overfed = false;
+        // Initialize overfed timer if not exists
+        if (this.save.overfedTime === undefined) this.save.overfedTime = 0;
         this.ui = new UIManager(this);
         
         // Game state
@@ -340,9 +340,13 @@ class TamagotchiGame {
         this.save.stats.energy = Math.max(0, this.save.stats.energy - STATS_CONFIG.DECAY_RATES.ENERGY * decayFactor);
         this.save.stats.happiness = Math.max(0, this.save.stats.happiness - STATS_CONFIG.DECAY_RATES.HAPPINESS * decayFactor);
         
-        // Clear overfed state when hunger drops below 90
-        if (this.save.overfed && this.save.stats.hunger <= 90) {
+        // Check for critical low stats and apply heart penalties
+        this.checkCriticalStats(oldHunger, oldEnergy, oldHappiness);
+        
+        // Clear overfed state after 5 minutes (300000ms) regardless of hunger
+        if (this.save.overfed && Date.now() - this.save.overfedTime > 300000) {
             this.save.overfed = false;
+            this.save.overfedTime = 0;
         }
         
         // Save stats if they changed significantly (every ~5 seconds worth of decay)
@@ -751,6 +755,7 @@ class TamagotchiGame {
         // Check for overfeeding
         if (this.save.stats.hunger > 90) {
             this.save.overfed = true;
+            this.save.overfedTime = Date.now(); // Track when overfed started
             this.ui.showNotification('Oof! So full! 🤤');
         } else {
             this.ui.showNotification('Yummy! 🍎');
@@ -812,8 +817,13 @@ class TamagotchiGame {
         this.save.licks++;
         this.save.lastLickTime = now;
         
-        // Dario doesn't like licks - only affects happiness/mood
+        // Dario doesn't like licks - affects happiness and hearts
         this.save.stats.happiness = Math.max(0, this.save.stats.happiness - 15);
+        
+        // Licking is bad behavior - lose hearts as penalty
+        if (this.save.currency.hearts > 0) {
+            this.save.currency.hearts = Math.max(0, this.save.currency.hearts - 2);
+        }
         
         // Check if he gets angry (more than 3 licks in 10 seconds)
         if (this.save.licks >= 3) {
@@ -1330,6 +1340,46 @@ The better you care for him, the happier he'll be!
         }
         
         this.save.lastUpdateTime = now;
+    }
+    
+    checkCriticalStats(oldHunger, oldEnergy, oldHappiness) {
+        // Initialize tracking if not exists
+        if (!this.save.lastCriticalWarning) this.save.lastCriticalWarning = 0;
+        
+        const now = Date.now();
+        const timeSinceLastWarning = now - this.save.lastCriticalWarning;
+        
+        // Only check for heart loss once every 30 seconds to avoid spam
+        if (timeSinceLastWarning < 30000) return;
+        
+        let heartLoss = 0;
+        let warning = "";
+        
+        // Check for starvation (hunger <= 10)
+        if (this.save.stats.hunger <= 10 && oldHunger > 10) {
+            heartLoss = 3;
+            warning = "Dario is starving! You're losing hearts! 😭💔";
+        }
+        // Check for extreme exhaustion (energy <= 5)
+        else if (this.save.stats.energy <= 5 && oldEnergy > 5) {
+            heartLoss = 2;
+            warning = "Dario is exhausted! You're losing hearts! 😴💔";
+        }
+        // Check for severe sadness (happiness <= 5)
+        else if (this.save.stats.happiness <= 5 && oldHappiness > 5) {
+            heartLoss = 2;
+            warning = "Dario is miserable! You're losing hearts! 😢💔";
+        }
+        
+        // Apply heart loss and show warning
+        if (heartLoss > 0 && this.save.currency.hearts > 0) {
+            this.save.currency.hearts = Math.max(0, this.save.currency.hearts - heartLoss);
+            this.ui.showNotification(warning);
+            this.save.lastCriticalWarning = now;
+            
+            // Save immediately when losing hearts for critical stats
+            SaveManager.saveNow(this.save);
+        }
     }
 }
 

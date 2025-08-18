@@ -44,7 +44,10 @@ export class SaveManager {
             experience: 0,
             licks: 0,
             lastLickTime: 0,
-            isAngry: false
+            isAngry: false,
+            overfed: false,
+            overfedTime: 0,
+            lastCriticalWarning: 0
         };
     }
 
