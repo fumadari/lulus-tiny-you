@@ -712,10 +712,10 @@
         
         <!-- Version Display -->
         <div class="version-display" style="margin-top: 15px;">
-            Version: August 18, 2025 v1.02.00
+            Version: August 18, 2025 v1.02.01
         </div>
         
-        <!-- Manual Save/Load Buttons -->
+        <!-- Manual Save/Load/Refresh Buttons -->
         <div style="position: fixed; bottom: 10px; left: 10px; z-index: 1000; display: flex; gap: 5px;">
             <button onclick="game.manualSave()" style="
                 background: linear-gradient(135deg, #28a745, #20c997);
@@ -739,6 +739,17 @@
                 cursor: pointer;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             ">📂 LOAD</button>
+            <button onclick="window.location.reload()" style="
+                background: linear-gradient(135deg, #ffc107, #e0a800);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 12px;
+                font-family: 'Press Start 2P', monospace;
+                font-size: 6px;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            ">🔄 REFRESH</button>
         </div>
     </div>
     </div>
