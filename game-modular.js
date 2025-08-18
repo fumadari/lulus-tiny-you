@@ -1027,7 +1027,7 @@ The better you care for him, the happier he'll be!
         if (this.currentScreen === 'minigame') {
             this.handleMinigameClick(x, y);
         } else if (this.currentScreen === 'map') {
-            this.mapRenderer.handleClick(x, y);
+            this.handleMapClick(x, y);
         }
     }
     
@@ -1037,6 +1037,32 @@ The better you care for him, the happier he'll be!
         } else if (this.currentMinigame === 'danceBattle' && this.danceBattle) {
             this.danceBattle.handleClick(x, y);
         }
+    }
+    
+    handleMapClick(x, y) {
+        // Convert screen coordinates to map coordinates
+        const playerScreenX = CANVAS_WIDTH / 2;
+        const playerScreenY = CANVAS_HEIGHT / 2;
+        
+        // Calculate the difference from player position
+        const deltaX = x - playerScreenX;
+        const deltaY = y - playerScreenY;
+        
+        // Convert to tile movement (simplified - move towards click)
+        let moveX = 0;
+        let moveY = 0;
+        
+        // Determine direction based on click position relative to player
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Horizontal movement
+            moveX = deltaX > 0 ? 1 : -1;
+        } else {
+            // Vertical movement  
+            moveY = deltaY > 0 ? 1 : -1;
+        }
+        
+        // Move the player
+        this.movePlayer(moveX, moveY);
     }
     
     // Map movement
@@ -1203,14 +1229,29 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Set up event listeners
     window.game.canvas.addEventListener('click', (e) => window.game.handleClick(e));
+    
+    // Improved touch handling for mobile
+    let touchStartTime = 0;
     window.game.canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const touch = e.touches[0];
-        const clickEvent = new MouseEvent('click', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-        });
-        window.game.handleClick(clickEvent);
+        touchStartTime = Date.now();
+    });
+    
+    window.game.canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        
+        // Only process short touches (taps, not long presses)
+        const touchDuration = Date.now() - touchStartTime;
+        if (touchDuration < 500 && e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            const clickEvent = new MouseEvent('click', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true,
+                cancelable: true
+            });
+            window.game.handleClick(clickEvent);
+        }
     });
     
     // Keyboard controls
