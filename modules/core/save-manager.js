@@ -12,7 +12,7 @@ export class SaveManager {
             lastUpdateTime: Date.now(),
             stats: { 
                 hunger: 80, 
-                energy: 80, 
+                energy: 100, 
                 happiness: 80,
                 maxHunger: 100,
                 maxEnergy: 100,
@@ -39,7 +39,10 @@ export class SaveManager {
             unlockedTokenSources: [],
             petName: "Tiny Dario",
             level: 1,
-            experience: 0
+            experience: 0,
+            licks: 0,
+            lastLickTime: 0,
+            isAngry: false
         };
     }
 

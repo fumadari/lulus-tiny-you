@@ -24,11 +24,13 @@ class TamagotchiGame {
         
         // Initialize managers
         this.save = SaveManager.loadSave();
-        // For debugging: clear overfed state and reset hunger to normal
+        // For debugging: clear overfed state and reset stats
         this.save.overfed = false;
         if (this.save.stats.hunger > 90) {
             this.save.stats.hunger = 80; // Reset to normal
         }
+        // Debug: refresh energy
+        this.save.stats.energy = 100;
         this.ui = new UIManager(this);
         
         // Game state
@@ -74,7 +76,7 @@ class TamagotchiGame {
         // Character/sprite state
         this.sprite = {
             x: CANVAS_WIDTH / 2,
-            y: 200, // Move Dario higher up on screen
+            y: 280, // Move Dario lower on screen
             animation: 'idle',
             frame: 0,
             walkFrame: 0
@@ -444,7 +446,7 @@ class TamagotchiGame {
         }
         
         // Draw character
-        this.drawCharacter(this.sprite.x, this.sprite.y, 20.0); // Make Dario GIGANTIC - 10 times as tall
+        this.drawCharacter(this.sprite.x, this.sprite.y, 4.0); // More reasonable size - 2x normal
         
         // Status bubbles
         if (this.save.stats.hunger < 30) {
@@ -509,7 +511,8 @@ class TamagotchiGame {
         this.ctx.fill();
         
         // Determine mood
-        const mood = this.save.stats.happiness > 70 ? 'happy' : 
+        const mood = this.save.isAngry ? 'angry' :
+                     this.save.stats.happiness > 70 ? 'happy' : 
                      this.save.stats.happiness < 30 ? 'sad' : 'normal';
         
         // Debug: log happiness and mood occasionally
@@ -517,11 +520,7 @@ class TamagotchiGame {
             console.log(`Happiness: ${this.save.stats.happiness}, Mood: ${mood}`);
         }
         
-        // DEBUG: Show mood on screen
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = '12px monospace';
-        this.ctx.fillText(`H:${Math.round(this.save.stats.happiness)} M:${mood}`, 10, 380);
-        this.ctx.fillStyle = '#000';
+        // Mood debugging removed
         
         // Body (circular when chubby, rectangular when normal)
         this.ctx.fillStyle = '#4169E1';
@@ -582,6 +581,14 @@ class TamagotchiGame {
                 this.ctx.fillText('💖', x - eyeSpacing - 2*scale, bobY - 8*scale);
                 this.ctx.fillText('💖', x + eyeSpacing - 5*scale, bobY - 8*scale);
                 this.ctx.fillStyle = '#000';
+            } else if (mood === 'angry') {
+                // Angry eyes - smaller and more intense
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(x - eyeSpacing, bobY - 12*scale, 2*scale, 2*scale);
+                this.ctx.fillRect(x + eyeSpacing - 2*scale, bobY - 12*scale, 2*scale, 2*scale);
+                // Angry eyebrows (slanted down)
+                this.ctx.fillRect(x - 8*scale, bobY - 14*scale, 4*scale, 2*scale);
+                this.ctx.fillRect(x + 4*scale, bobY - 14*scale, 4*scale, 2*scale);
             } else {
                 // Normal eyes with blinking
                 this.ctx.fillStyle = '#000';
@@ -626,6 +633,11 @@ class TamagotchiGame {
             // Right side curves down
             this.ctx.fillRect(x + 3*scale, bobY - 5*scale, 2*scale, 1*scale);
             this.ctx.fillRect(x + 4*scale, bobY - 4*scale, 2*scale, 1*scale);
+        } else if (mood === 'angry') {
+            // Angry expression - just the frowning mouth (eyes handled above)
+            if (this.frameCount % 300 === 0) console.log('Drawing angry mouth');
+            // Angry frown
+            this.ctx.fillRect(x - 3*scale, bobY - 5*scale, 6*scale, 2*scale);
         } else {
             // Neutral mouth - straight line
             if (this.frameCount % 300 === 0) console.log('Drawing neutral mouth');
@@ -717,12 +729,25 @@ class TamagotchiGame {
         if (this.currentScreen !== 'main') return;
         
         const oldHappiness = this.save.stats.happiness;
-        this.save.stats.happiness = Math.min(100, this.save.stats.happiness + STATS_CONFIG.INCREASE_AMOUNTS.PET);
+        
+        // Check if Dario is angry - petting helps calm him down
+        if (this.save.isAngry) {
+            this.save.isAngry = false;
+            this.save.licks = 0; // Reset lick counter
+            this.save.stats.happiness = Math.min(100, this.save.stats.happiness + STATS_CONFIG.INCREASE_AMOUNTS.PET + 10); // Extra happiness for calming
+            this.sprite.animation = 'happy';
+            this.sound.play('happy');
+            this.ui.showNotification("Thank you for calming me down! 🥰");
+            this.addParticles(this.sprite.x, this.sprite.y, '#00FF00', 15); // Green particles for calming
+        } else {
+            // Normal pet behavior - only affects happiness
+            this.save.stats.happiness = Math.min(100, this.save.stats.happiness + STATS_CONFIG.INCREASE_AMOUNTS.PET);
+            this.sprite.animation = 'happy';
+            this.sound.play('pet');
+            this.addParticles(this.sprite.x, this.sprite.y, '#FF69B4', 10);
+        }
+        
         console.log(`Pet action: happiness ${oldHappiness} -> ${this.save.stats.happiness}`);
-        this.save.stats.energy = Math.min(100, this.save.stats.energy + 5);
-        this.sprite.animation = 'happy';
-        this.sound.play('pet');
-        this.addParticles(this.sprite.x, this.sprite.y, '#FF69B4', 10);
         
         // Add hearts
         this.save.currency.hearts++;
@@ -731,6 +756,56 @@ class TamagotchiGame {
         setTimeout(() => {
             this.sprite.animation = 'idle';
         }, 1000);
+    }
+    
+    lick() {
+        if (this.currentScreen !== 'main') return;
+        
+        // Initialize lick tracking if not exists
+        if (this.save.licks === undefined) this.save.licks = 0;
+        if (this.save.lastLickTime === undefined) this.save.lastLickTime = 0;
+        if (this.save.isAngry === undefined) this.save.isAngry = false;
+        
+        const now = Date.now();
+        this.save.licks++;
+        this.save.lastLickTime = now;
+        
+        // Dario doesn't like licks - only affects happiness/mood
+        this.save.stats.happiness = Math.max(0, this.save.stats.happiness - 15);
+        
+        // Check if he gets angry (more than 3 licks in 10 seconds)
+        if (this.save.licks >= 3) {
+            this.save.isAngry = true;
+            this.save.stats.happiness = Math.max(0, this.save.stats.happiness - 25);
+            this.sprite.animation = 'angry';
+            this.sound.play('sad');
+            this.ui.showNotification("Stop licking me! I'm getting angry! 😠");
+            this.addParticles(this.sprite.x, this.sprite.y, '#FF0000', 15);
+            
+            // Stay angry longer
+            setTimeout(() => {
+                this.sprite.animation = 'idle';
+                this.save.isAngry = false;
+                // Reset lick counter after anger
+                this.save.licks = 0;
+            }, 3000);
+        } else {
+            this.sprite.animation = 'sad';
+            this.sound.play('fail');
+            this.ui.showNotification("Ew! I don't like licks! 😣");
+            this.addParticles(this.sprite.x, this.sprite.y, '#8B4513', 8);
+            
+            setTimeout(() => {
+                if (!this.save.isAngry) this.sprite.animation = 'idle';
+            }, 1500);
+        }
+        
+        // Reset lick counter after 10 seconds of no licking
+        setTimeout(() => {
+            if (Date.now() - this.save.lastLickTime >= 10000) {
+                this.save.licks = 0;
+            }
+        }, 10000);
     }
     
     talk() {

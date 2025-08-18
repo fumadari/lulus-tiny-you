@@ -9,7 +9,8 @@
     <meta name="theme-color" content="#ff70a6">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="apple-touch-icon.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
@@ -26,6 +27,7 @@
             background: linear-gradient(135deg, #ff70a6 0%, #ff9a9e 50%, #fecfef 100%);
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 10px;
@@ -140,6 +142,54 @@
             gap: 6px;
             pointer-events: auto;
             z-index: 10;
+        }
+
+        .external-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 0 20px;
+            flex-wrap: wrap;
+        }
+
+        .external-controls .control-btn {
+            flex: none;
+            min-width: 80px;
+        }
+
+        .map-back-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            pointer-events: auto;
+            z-index: 15;
+        }
+
+        .map-back-button .control-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            min-width: 70px;
+        }
+
+        .map-back-button .control-btn:hover {
+            background: linear-gradient(135deg, #218838, #1ba87a);
+        }
+
+        .minigame-back-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            pointer-events: auto;
+            z-index: 15;
+        }
+
+        .minigame-back-button .control-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            min-width: 70px;
+        }
+
+        .minigame-back-button .control-btn:hover {
+            background: linear-gradient(135deg, #c82333, #a71e2a);
         }
 
         .control-btn {
@@ -441,6 +491,13 @@
             50% { background: linear-gradient(45deg, #ffd700, #ff70a6, #ffd700); }
         }
 
+        @keyframes float-up {
+            to {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+        }
+
         .confetti {
             position: absolute;
             width: 10px;
@@ -455,10 +512,30 @@
                 opacity: 0;
             }
         }
+
+        .version-display {
+            text-align: center;
+            font-size: 8px;
+            color: #666;
+            margin-bottom: 10px;
+            opacity: 0.7;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
-    <div class="tamagotchi-container">
+    <!-- Version Display -->
+    <div class="version-display">
+        Version: August 18, 2025 v1.01.2
+    </div>
+    
+    <div class="game-container">
+        <div class="tamagotchi-container">
         <div class="screen">
             <!-- Loading Screen -->
             <div class="loading-screen" id="loadingScreen">
@@ -510,29 +587,22 @@
                     </div>
                 </div>
 
-                <!-- Controls -->
-                <div class="controls" id="mainControls">
-                    <button class="control-btn" onclick="game.feed()">
-                        <div class="icon">🍎</div>
-                        FEED
-                    </button>
-                    <button class="control-btn" onclick="game.pet()">
-                        <div class="icon">✋</div>
-                        PET
-                    </button>
-                    <button class="control-btn" onclick="game.talk()">
-                        <div class="icon">💬</div>
-                        TALK
-                    </button>
-                    <button class="control-btn" onclick="game.startSelfie()">
-                        <div class="icon">📸</div>
-                        SELFIE
-                    </button>
-                    <button class="control-btn" onclick="game.openMap()">
-                        <div class="icon">🗽</div>
-                        MAP
+                <!-- Map Back Button -->
+                <div class="map-back-button" id="mapBackButton" style="display: none;">
+                    <button class="control-btn" onclick="game.exitMap()">
+                        <div class="icon">🏠</div>
+                        HOME
                     </button>
                 </div>
+
+                <!-- Minigame Back Button -->
+                <div class="minigame-back-button" id="minigameBackButton" style="display: none;">
+                    <button class="control-btn" onclick="game.endMinigame()">
+                        <div class="icon">❌</div>
+                        EXIT
+                    </button>
+                </div>
+
 
                 <!-- Menu Overlay -->
                 <div class="menu-overlay" id="menuOverlay">
@@ -599,14 +669,50 @@
                 <div class="ring-event" id="ringEvent"></div>
             </div>
         </div>
+        
+        <!-- Controls outside the screen -->
+        <div class="external-controls" id="mainControls">
+            <button class="control-btn" onclick="game.feed()">
+                <div class="icon">🍎</div>
+                FEED
+            </button>
+            <button class="control-btn" onclick="game.pet()">
+                <div class="icon">✋</div>
+                PET
+            </button>
+            <button class="control-btn" onclick="game.talk()">
+                <div class="icon">💬</div>
+                TALK
+            </button>
+            <button class="control-btn" onclick="game.startSelfie()">
+                <div class="icon">📸</div>
+                SELFIE
+            </button>
+            <button class="control-btn" onclick="game.toggleMenu()">
+                <div class="icon">🎮</div>
+                GAMES
+            </button>
+            <button class="control-btn" onclick="game.lick()">
+                <div class="icon">👅</div>
+                LICKS
+            </button>
+            <button class="control-btn" onclick="game.openMap()">
+                <div class="icon">🗽</div>
+                MAP
+            </button>
+        </div>
+    </div>
     </div>
 
+    <!-- Load dependencies first -->
     <script src="sound.js"></script>
     <script src="dance-battle.js"></script>
     <script src="nyc-map-data.js"></script>
     <script src="camera-system.js"></script>
     <script src="lulu-interaction.js"></script>
     <script src="map-renderer.js"></script>
-    <script src="game-complete.js"></script>
+    
+    <!-- Load the modular game with ES6 modules -->
+    <script type="module" src="game-modular.js"></script>
 </body>
 </html>
