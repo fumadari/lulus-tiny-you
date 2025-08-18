@@ -47,7 +47,60 @@ export class SaveManager {
             isAngry: false,
             overfed: false,
             overfedTime: 0,
-            lastCriticalWarning: 0
+            lastCriticalWarning: 0,
+            shop: {
+                purchases: [],
+                availableItems: [
+                    {
+                        id: 'apartment_cat',
+                        name: 'Lulu\'s Cat',
+                        description: 'A cute cat that lives in Lulu\'s apartment',
+                        price: 50,
+                        emoji: '🐱',
+                        available: true
+                    },
+                    {
+                        id: 'food_premium',
+                        name: 'Premium Food',
+                        description: 'Special food that fills hunger more',
+                        price: 30,
+                        emoji: '🥘',
+                        available: false
+                    },
+                    {
+                        id: 'energy_drink',
+                        name: 'Energy Boost',
+                        description: 'Instant energy restoration',
+                        price: 25,
+                        emoji: '⚡',
+                        available: false
+                    },
+                    {
+                        id: 'happiness_toy',
+                        name: 'Fun Toy',
+                        description: 'A toy that makes Dario happy',
+                        price: 40,
+                        emoji: '🧸',
+                        available: false
+                    },
+                    {
+                        id: 'outfit_cool',
+                        name: 'Cool Outfit',
+                        description: 'Stylish clothes for Dario',
+                        price: 60,
+                        emoji: '👕',
+                        available: false
+                    },
+                    {
+                        id: 'decoration_plants',
+                        name: 'Plants',
+                        description: 'Beautiful plants for the apartment',
+                        price: 35,
+                        emoji: '🪴',
+                        available: false
+                    }
+                ]
+            }
         };
     }
 

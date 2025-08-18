@@ -597,6 +597,12 @@ class TamagotchiGame {
         this.ctx.fillText('💕', 200, 100);
         this.ctx.fillText('💕', 300, 80);
         this.ctx.fillText('💕', 150, 120);
+        
+        // Draw cat if purchased
+        if (this.save.shop && this.save.shop.purchases.includes('apartment_cat')) {
+            this.ctx.font = '30px serif';
+            this.ctx.fillText('🐱', 280, CANVAS_HEIGHT - 90); // Cat on the bed
+        }
     }
     
     renderMinigame() {
@@ -1008,11 +1014,220 @@ class TamagotchiGame {
         SaveManager.saveNow(this.save);
     }
     
-    startSelfie() {
+    async startSelfie() {
         if (this.currentScreen !== 'main') return;
         
-        // Simple selfie simulation
-        this.ui.showNotification('📸 Say cheese!');
+        try {
+            this.ui.showNotification('📸 Starting camera...');
+            
+            // Request camera access
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'user', // Front-facing camera for selfies
+                    width: { ideal: 360 },
+                    height: { ideal: 420 }
+                } 
+            });
+            
+            this.showCameraOverlay(stream);
+        } catch (error) {
+            console.error('Camera access denied or not available:', error);
+            this.ui.showNotification('Camera not available. Taking virtual selfie! 📸');
+            this.fallbackSelfie();
+        }
+    }
+    
+    showCameraOverlay(stream) {
+        // Create camera overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'cameraOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: black;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Create video element
+        const video = document.createElement('video');
+        video.style.cssText = `
+            width: 90vw;
+            max-width: 360px;
+            height: auto;
+            border-radius: 10px;
+            transform: scaleX(-1); /* Mirror for selfie effect */
+        `;
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.playsInline = true;
+        
+        // Create canvas for Dario overlay
+        const overlayCanvas = document.createElement('canvas');
+        overlayCanvas.width = 360;
+        overlayCanvas.height = 420;
+        overlayCanvas.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scaleX(-1);
+            pointer-events: none;
+            max-width: 90vw;
+            height: auto;
+        `;
+        
+        // Capture and exit buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            position: absolute;
+            bottom: 30px;
+            display: flex;
+            gap: 20px;
+        `;
+        
+        const captureBtn = document.createElement('button');
+        captureBtn.innerHTML = '📸 CAPTURE';
+        captureBtn.style.cssText = `
+            background: linear-gradient(135deg, #ff70a6, #ff5e96);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            cursor: pointer;
+        `;
+        
+        const exitBtn = document.createElement('button');
+        exitBtn.innerHTML = '❌ EXIT';
+        exitBtn.style.cssText = `
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            cursor: pointer;
+        `;
+        
+        // Add Dario to overlay canvas
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const drawDarioOverlay = () => {
+            overlayCtx.clearRect(0, 0, 360, 420);
+            
+            // Draw mini Dario in corner
+            overlayCtx.save();
+            overlayCtx.scale(0.8, 0.8); // Smaller for overlay
+            
+            // Draw Dario using game's character drawing
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 360;
+            tempCanvas.height = 420;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Copy current game canvas as reference for Dario position
+            this.drawCharacterForSelfie(overlayCtx, 280, 350, 2.0); // Bottom right corner
+            
+            overlayCtx.restore();
+            requestAnimationFrame(drawDarioOverlay);
+        };
+        drawDarioOverlay();
+        
+        // Event handlers
+        captureBtn.onclick = () => this.captureSelfie(video, overlayCanvas, stream, overlay);
+        exitBtn.onclick = () => this.closeCameraOverlay(stream, overlay);
+        
+        buttonContainer.appendChild(captureBtn);
+        buttonContainer.appendChild(exitBtn);
+        
+        overlay.appendChild(video);
+        overlay.appendChild(overlayCanvas);
+        overlay.appendChild(buttonContainer);
+        document.body.appendChild(overlay);
+    }
+    
+    drawCharacterForSelfie(ctx, x, y, scale) {
+        // Simple mini Dario for selfie overlay
+        const bobY = y + Math.sin(Date.now() * 0.005) * 2;
+        
+        // Body
+        ctx.fillStyle = '#FDBCB4';
+        ctx.fillRect(x - 8*scale, bobY - 8*scale, 16*scale, 20*scale);
+        
+        // Head
+        ctx.fillStyle = '#FDBCB4';
+        ctx.fillRect(x - 10*scale, bobY - 20*scale, 20*scale, 16*scale);
+        
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x - 6*scale, bobY - 16*scale, 2*scale, 2*scale);
+        ctx.fillRect(x + 4*scale, bobY - 16*scale, 2*scale, 2*scale);
+        
+        // Mouth
+        ctx.fillRect(x - 2*scale, bobY - 10*scale, 4*scale, 1*scale);
+        
+        // Wave hand for selfie
+        ctx.fillStyle = '#FDBCB4';
+        ctx.fillRect(x + 12*scale, bobY - 6*scale, 4*scale, 6*scale);
+    }
+    
+    captureSelfie(video, overlayCanvas, stream, overlay) {
+        // Create final canvas
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = video.videoWidth || 360;
+        finalCanvas.height = video.videoHeight || 420;
+        const finalCtx = finalCanvas.getContext('2d');
+        
+        // Draw video frame (mirrored)
+        finalCtx.save();
+        finalCtx.scale(-1, 1);
+        finalCtx.drawImage(video, -finalCanvas.width, 0);
+        finalCtx.restore();
+        
+        // Draw Dario overlay
+        finalCtx.drawImage(overlayCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+        
+        // Flash effect
+        this.ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        this.sound.play('camera');
+        
+        // Download the selfie
+        finalCanvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dario-selfie-${Date.now()}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+        
+        this.closeCameraOverlay(stream, overlay);
+        
+        setTimeout(() => {
+            this.ui.showNotification('Perfect selfie with Dario! +10 💖');
+            this.save.currency.hearts += 10;
+            SaveManager.saveNow(this.save);
+        }, 500);
+    }
+    
+    closeCameraOverlay(stream, overlay) {
+        // Stop camera stream
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Remove overlay
+        document.body.removeChild(overlay);
+    }
+    
+    fallbackSelfie() {
+        // Original simple selfie for fallback
         this.sound.play('camera');
         
         // Flash effect
@@ -1020,8 +1235,9 @@ class TamagotchiGame {
         this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         
         setTimeout(() => {
-            this.ui.showNotification('Perfect shot! +5 💖');
+            this.ui.showNotification('Virtual selfie taken! +5 💖');
             this.save.currency.hearts += 5;
+            SaveManager.saveNow(this.save);
         }, 500);
     }
     
@@ -1115,6 +1331,114 @@ class TamagotchiGame {
         
         SaveManager.saveNow(this.save);
         this.showNotification("Back to main screen! 🏠");
+    }
+    
+    // ===== SHOP SYSTEM =====
+    
+    openShop() {
+        this.ui.showModal(
+            "Hearts Shop 💖🛒",
+            this.generateShopHTML(),
+            [
+                { text: "Close Shop", action: () => this.ui.closeModal() }
+            ]
+        );
+    }
+    
+    generateShopHTML() {
+        if (!this.save.shop) {
+            this.save.shop = { purchases: [], availableItems: [] };
+        }
+        
+        let html = `<div style="max-height: 200px; overflow-y: auto; text-align: left;">`;
+        html += `<div style="text-align: center; margin-bottom: 10px; color: #ff70a6;">You have ${this.save.currency.hearts} hearts 💖</div>`;
+        
+        // Get items from save (which includes the default items)
+        const items = this.save.shop.availableItems || [];
+        
+        for (let item of items) {
+            const isPurchased = this.save.shop.purchases.includes(item.id);
+            const canAfford = this.save.currency.hearts >= item.price;
+            
+            html += `<div style="
+                border: 2px solid ${isPurchased ? '#28a745' : (item.available ? '#ff70a6' : '#666')};
+                margin: 5px 0;
+                padding: 8px;
+                border-radius: 5px;
+                background: ${isPurchased ? '#d4edda' : (item.available ? 'rgba(255,112,166,0.1)' : 'rgba(100,100,100,0.1)')};
+            ">`;
+            
+            html += `<div style="font-size: 8px; color: ${isPurchased ? '#155724' : (item.available ? '#ff70a6' : '#666')};">`;
+            html += `${item.emoji} ${item.name} - ${item.price} 💖`;
+            html += `</div>`;
+            
+            html += `<div style="font-size: 6px; color: #666; margin-top: 2px;">`;
+            html += item.description;
+            html += `</div>`;
+            
+            if (isPurchased) {
+                html += `<div style="font-size: 6px; color: #28a745; margin-top: 2px;">✅ PURCHASED</div>`;
+            } else if (!item.available) {
+                html += `<div style="font-size: 6px; color: #666; margin-top: 2px;">🔒 COMING SOON</div>`;
+            } else if (canAfford) {
+                html += `<div style="margin-top: 5px;">`;
+                html += `<button onclick="game.purchaseItem('${item.id}')" style="
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    font-size: 6px;
+                    cursor: pointer;
+                ">BUY NOW</button>`;
+                html += `</div>`;
+            } else {
+                html += `<div style="font-size: 6px; color: #dc3545; margin-top: 2px;">❌ Not enough hearts</div>`;
+            }
+            
+            html += `</div>`;
+        }
+        
+        html += `</div>`;
+        return html;
+    }
+    
+    purchaseItem(itemId) {
+        const item = this.save.shop.availableItems.find(i => i.id === itemId);
+        if (!item || !item.available || this.save.shop.purchases.includes(itemId)) {
+            return;
+        }
+        
+        if (this.save.currency.hearts >= item.price) {
+            this.save.currency.hearts -= item.price;
+            this.save.shop.purchases.push(itemId);
+            
+            // Apply item effects
+            this.applyItemEffect(itemId);
+            
+            SaveManager.saveNow(this.save);
+            this.ui.showNotification(`Purchased ${item.name}! ${item.emoji}`);
+            
+            // Refresh shop
+            setTimeout(() => {
+                this.ui.closeModal();
+                this.openShop();
+            }, 1000);
+        }
+    }
+    
+    applyItemEffect(itemId) {
+        switch(itemId) {
+            case 'apartment_cat':
+                this.ui.showNotification("A cute cat now lives in Lulu's apartment! 🐱💕");
+                break;
+            // Other items will be implemented when available
+        }
+    }
+    
+    manualSave() {
+        SaveManager.saveNow(this.save);
+        this.ui.showNotification("Game saved! 💾✅");
     }
     
     // Menu functions

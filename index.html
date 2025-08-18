@@ -704,12 +704,33 @@
                 <div class="icon">🗽</div>
                 MAP
             </button>
+            <button class="control-btn" onclick="game.openShop()">
+                <div class="icon">🛒</div>
+                SHOP
+            </button>
         </div>
         
         <!-- Version Display -->
         <div class="version-display" style="margin-top: 15px;">
             Version: August 18, 2025 v1.01.2
         </div>
+        
+        <!-- Manual Save Button -->
+        <button onclick="game.manualSave()" style="
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
+        ">💾 SAVE</button>
     </div>
     </div>
 
