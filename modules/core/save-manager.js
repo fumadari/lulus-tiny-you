@@ -3,6 +3,8 @@
 // ============================================
 
 export const SAVE_KEY = 'lulu-tiny-you-v5';
+const BACKUP_KEY = 'lulu-tiny-you-backup-v5';
+const SESSION_KEY = 'lulu-tiny-you-session-v5';
 
 export class SaveManager {
     static createDefaultSave() {
@@ -48,22 +50,117 @@ export class SaveManager {
 
     static loadSave() {
         try {
-            const saved = localStorage.getItem(SAVE_KEY);
-            if (!saved) return this.createDefaultSave();
+            // Try loading from primary localStorage first
+            let saved = localStorage.getItem(SAVE_KEY);
+            
+            // If not found, try backup localStorage
+            if (!saved) {
+                saved = localStorage.getItem(BACKUP_KEY);
+                if (saved) {
+                    console.log('Restored from backup save');
+                }
+            }
+            
+            // If still not found, try sessionStorage
+            if (!saved) {
+                saved = sessionStorage.getItem(SESSION_KEY);
+                if (saved) {
+                    console.log('Restored from session save');
+                }
+            }
+            
+            if (!saved) {
+                const newSave = this.createDefaultSave();
+                // Immediately save to all storage methods
+                this.saveToAllStorages(newSave);
+                return newSave;
+            }
+            
             const data = JSON.parse(saved);
-            if (data.version !== 5) return this.createDefaultSave();
+            if (data.version !== 5) {
+                const newSave = this.createDefaultSave();
+                this.saveToAllStorages(newSave);
+                return newSave;
+            }
+            
+            // Restore to all storage methods
+            this.saveToAllStorages(data);
             return data;
         } catch (e) {
-            return this.createDefaultSave();
+            console.error('Load save error:', e);
+            const newSave = this.createDefaultSave();
+            this.saveToAllStorages(newSave);
+            return newSave;
         }
     }
 
     static saveNow(gameState) {
+        gameState.lastUpdateTime = Date.now();
+        this.saveToAllStorages(gameState);
+    }
+    
+    static saveToAllStorages(gameState) {
+        const dataString = JSON.stringify(gameState);
+        
         try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+            // Primary localStorage
+            localStorage.setItem(SAVE_KEY, dataString);
         } catch (e) {
-            console.error('Save error:', e);
+            console.error('Primary localStorage save error:', e);
         }
+        
+        try {
+            // Backup localStorage with different key
+            localStorage.setItem(BACKUP_KEY, dataString);
+        } catch (e) {
+            console.error('Backup localStorage save error:', e);
+        }
+        
+        try {
+            // Session storage for additional backup
+            sessionStorage.setItem(SESSION_KEY, dataString);
+        } catch (e) {
+            console.error('Session storage save error:', e);
+        }
+        
+        // Also create a URL-based backup for extreme cases
+        this.updateURLHash(gameState);
+    }
+    
+    static updateURLHash(gameState) {
+        try {
+            // Store minimal essential data in URL hash for emergency recovery
+            const essential = {
+                stats: gameState.stats,
+                currency: gameState.currency,
+                tokens: gameState.tokens,
+                level: gameState.level,
+                lastSave: Date.now()
+            };
+            const compressed = btoa(JSON.stringify(essential));
+            // Only update if hash is empty or old
+            if (!window.location.hash || window.location.hash.includes('oldSave')) {
+                window.history.replaceState(null, '', `#save=${compressed}`);
+            }
+        } catch (e) {
+            console.error('URL backup error:', e);
+        }
+    }
+    
+    static loadFromURLHash() {
+        try {
+            const hash = window.location.hash;
+            if (hash.includes('save=')) {
+                const saveData = hash.split('save=')[1];
+                const decompressed = JSON.parse(atob(saveData));
+                if (decompressed.lastSave && Date.now() - decompressed.lastSave < 86400000) { // 24 hours
+                    return decompressed;
+                }
+            }
+        } catch (e) {
+            console.error('URL hash restore error:', e);
+        }
+        return null;
     }
     
     static exportSave(gameState) {

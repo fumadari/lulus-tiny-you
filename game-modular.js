@@ -263,9 +263,29 @@ class TamagotchiGame {
     }
     
     startAutoSave() {
+        // More frequent auto-save for iOS persistence
         setInterval(() => {
             SaveManager.saveNow(this.save);
-        }, 30000); // Auto-save every 30 seconds
+        }, 10000); // Auto-save every 10 seconds
+        
+        // Also save when page visibility changes (important for mobile)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                SaveManager.saveNow(this.save);
+                console.log('Saved on page hide');
+            }
+        });
+        
+        // Save when app loses focus
+        window.addEventListener('blur', () => {
+            SaveManager.saveNow(this.save);
+            console.log('Saved on blur');
+        });
+        
+        // Save before page unload
+        window.addEventListener('beforeunload', () => {
+            SaveManager.saveNow(this.save);
+        });
     }
     
     // Core game loop
@@ -720,6 +740,9 @@ class TamagotchiGame {
             this.ui.showNotification('Yummy! 🍎');
         }
         
+        // Save immediately after feeding
+        SaveManager.saveNow(this.save);
+        
         setTimeout(() => {
             this.sprite.animation = 'idle';
         }, 1000);
@@ -752,6 +775,9 @@ class TamagotchiGame {
         // Add hearts
         this.save.currency.hearts++;
         this.ui.createHeartParticle(this.sprite.x, this.sprite.y - 30);
+        
+        // Save immediately after petting
+        SaveManager.saveNow(this.save);
         
         setTimeout(() => {
             this.sprite.animation = 'idle';
@@ -800,10 +826,14 @@ class TamagotchiGame {
             }, 1500);
         }
         
+        // Save immediately after licking
+        SaveManager.saveNow(this.save);
+        
         // Reset lick counter after 10 seconds of no licking
         setTimeout(() => {
             if (Date.now() - this.save.lastLickTime >= 10000) {
                 this.save.licks = 0;
+                SaveManager.saveNow(this.save); // Save when resetting lick counter
             }
         }, 10000);
     }
@@ -856,6 +886,9 @@ class TamagotchiGame {
         this.ui.showNotification(message);
         this.save.stats.happiness = Math.min(100, this.save.stats.happiness + 10);
         this.sound.play('talk');
+        
+        // Save immediately after talking
+        SaveManager.saveNow(this.save);
     }
     
     startSelfie() {
