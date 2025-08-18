@@ -1441,6 +1441,31 @@ class TamagotchiGame {
         this.ui.showNotification("Game saved! 💾✅");
     }
     
+    manualLoad() {
+        try {
+            // Reload save from storage
+            const loadedSave = SaveManager.loadSave();
+            this.save = loadedSave;
+            
+            // Apply offline decay for loaded save
+            this.applyOfflineDecay();
+            
+            // Initialize any missing fields
+            if (this.save.overfedTime === undefined) this.save.overfedTime = 0;
+            if (!this.save.shop) {
+                this.save.shop = { purchases: [], availableItems: [] };
+            }
+            
+            this.ui.showNotification("Game loaded! 📂✅");
+            
+            // Save the loaded state (in case offline decay applied changes)
+            SaveManager.saveNow(this.save);
+        } catch (error) {
+            console.error('Load failed:', error);
+            this.ui.showNotification("Load failed! 📂❌");
+        }
+    }
+    
     // Menu functions
     toggleMenu() {
         this.ui.toggleMenu();

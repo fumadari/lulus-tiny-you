@@ -49,7 +49,12 @@ export class UIManager {
         
         if (modal && modalTitle && modalText && modalButtons) {
             modalTitle.textContent = title;
-            modalText.textContent = text;
+            // Check if text contains HTML tags, if so use innerHTML
+            if (text.includes('<') && text.includes('>')) {
+                modalText.innerHTML = text;
+            } else {
+                modalText.textContent = text;
+            }
             
             // Clear existing buttons
             modalButtons.innerHTML = '';

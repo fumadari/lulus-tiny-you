@@ -715,22 +715,31 @@
             Version: August 18, 2025 v1.01.2
         </div>
         
-        <!-- Manual Save Button -->
-        <button onclick="game.manualSave()" style="
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 8px 12px;
-            font-family: 'Press Start 2P', monospace;
-            font-size: 6px;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            z-index: 1000;
-        ">💾 SAVE</button>
+        <!-- Manual Save/Load Buttons -->
+        <div style="position: fixed; bottom: 10px; left: 10px; z-index: 1000; display: flex; gap: 5px;">
+            <button onclick="game.manualSave()" style="
+                background: linear-gradient(135deg, #28a745, #20c997);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 12px;
+                font-family: 'Press Start 2P', monospace;
+                font-size: 6px;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            ">💾 SAVE</button>
+            <button onclick="game.manualLoad()" style="
+                background: linear-gradient(135deg, #007bff, #0056b3);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 12px;
+                font-family: 'Press Start 2P', monospace;
+                font-size: 6px;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            ">📂 LOAD</button>
+        </div>
     </div>
     </div>
 
