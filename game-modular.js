@@ -940,6 +940,40 @@ class TamagotchiGame {
         this.ui.toggleMenu();
     }
     
+    showHowToPlay() {
+        const instructions = `
+🎮 HOW TO PLAY TAMAGOTCHI DARIO 🎮
+
+💕 BASIC CARE:
+• FEED 🍎 - Keeps Dario full and happy
+• PET ✋ - Shows love, increases happiness
+• TALK 💬 - Chat with Dario for sweet messages
+
+😠 BE CAREFUL WITH LICKS:
+• LICKS 👅 - Dario doesn't like them!
+• Too many licks (3+) makes him angry
+• PET him to calm him down when angry
+
+🎯 ACTIVITIES:
+• GAMES 🎮 - Play minigames to earn hearts
+• MAP 🗽 - Explore NYC with Dario
+• SELFIE 📸 - Take cute photos together
+
+📊 WATCH HIS STATS:
+• 🍎 Hunger - Feed when low
+• ⚡ Energy - Let him rest
+• 😊 Happiness - Pet and play with him
+
+❤️ GOAL: Keep Dario happy and healthy!
+The better you care for him, the happier he'll be!
+
+💖 Made with love for you! 💖`;
+
+        this.ui.showModal('How to Play', instructions, [
+            { text: 'Got it! ✨', action: () => this.ui.closeModal() }
+        ]);
+    }
+
     manageSave() {
         this.ui.showModal('Save Data', 'Choose an option:', [
             { 
