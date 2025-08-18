@@ -869,7 +869,29 @@ class TamagotchiGame {
     pet() {
         if (this.currentScreen !== 'main') return;
         
+        const now = Date.now();
         const oldHappiness = this.save.stats.happiness;
+        
+        // Initialize pet tracking if not exists
+        if (this.save.lastPetTime === undefined) this.save.lastPetTime = 0;
+        if (this.save.petCount === undefined) this.save.petCount = 0;
+        
+        // Check cooldown - reset pet count every 30 seconds
+        const timeSinceLastPet = now - this.save.lastPetTime;
+        if (timeSinceLastPet > 30000) { // 30 seconds
+            this.save.petCount = 0;
+        }
+        
+        // Limit hearts based on recent petting frequency
+        let heartsToAdd = 0;
+        if (this.save.petCount < 3) {
+            heartsToAdd = 1; // First 3 pets give hearts
+        } else if (this.save.petCount < 6) {
+            if (Math.random() < 0.5) heartsToAdd = 1; // 50% chance for next 3 pets
+        } else {
+            // No hearts after 6 pets in 30 seconds
+            heartsToAdd = 0;
+        }
         
         // Check if Dario is angry - petting helps calm him down
         if (this.save.isAngry) {
@@ -880,6 +902,7 @@ class TamagotchiGame {
             this.sound.play('happy');
             this.ui.showNotification("Thank you for calming me down! 🥰");
             this.addParticles(this.sprite.x, this.sprite.y, '#00FF00', 15); // Green particles for calming
+            heartsToAdd = Math.max(1, heartsToAdd); // Always give at least 1 heart for calming anger
         } else {
             // Normal pet behavior - only affects happiness
             this.save.stats.happiness = Math.min(100, this.save.stats.happiness + STATS_CONFIG.INCREASE_AMOUNTS.PET);
@@ -890,9 +913,17 @@ class TamagotchiGame {
         
         console.log(`Pet action: happiness ${oldHappiness} -> ${this.save.stats.happiness}`);
         
-        // Add hearts
-        this.save.currency.hearts++;
-        this.ui.createHeartParticle(this.sprite.x, this.sprite.y - 30);
+        // Update pet tracking
+        this.save.lastPetTime = now;
+        this.save.petCount++;
+        
+        // Add hearts based on cooldown logic
+        if (heartsToAdd > 0) {
+            this.save.currency.hearts += heartsToAdd;
+            this.ui.createHeartParticle(this.sprite.x, this.sprite.y - 30);
+        } else if (this.save.petCount > 6) {
+            this.ui.showNotification("I'm feeling a bit overwhelmed! 😅");
+        }
         
         // Save immediately after petting
         SaveManager.saveNow(this.save);
@@ -1378,7 +1409,7 @@ class TamagotchiGame {
             
             if (isPurchased) {
                 html += `<div style="font-size: 6px; color: #28a745; margin-top: 2px;">✅ PURCHASED</div>`;
-            } else if (!item.available) {
+            } else if (!item.available || item.comingSoon) {
                 html += `<div style="font-size: 6px; color: #666; margin-top: 2px;">🔒 COMING SOON</div>`;
             } else if (canAfford) {
                 html += `<div style="margin-top: 5px;">`;

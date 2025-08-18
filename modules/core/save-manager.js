@@ -44,6 +44,8 @@ export class SaveManager {
             experience: 0,
             licks: 0,
             lastLickTime: 0,
+            lastPetTime: 0,
+            petCount: 0,
             isAngry: false,
             overfed: false,
             overfedTime: 0,
@@ -57,47 +59,53 @@ export class SaveManager {
                         description: 'A cute cat that lives in Lulu\'s apartment',
                         price: 50,
                         emoji: '🐱',
-                        available: true
+                        available: false,
+                        comingSoon: true
                     },
                     {
-                        id: 'food_premium',
-                        name: 'Premium Food',
-                        description: 'Special food that fills hunger more',
-                        price: 30,
-                        emoji: '🥘',
-                        available: false
-                    },
-                    {
-                        id: 'energy_drink',
-                        name: 'Energy Boost',
-                        description: 'Instant energy restoration',
+                        id: 'celcius_drink',
+                        name: 'Celcius Energy Drink',
+                        description: 'High-energy drink that boosts Dario\'s energy',
                         price: 25,
-                        emoji: '⚡',
-                        available: false
+                        emoji: '🥤',
+                        available: false,
+                        comingSoon: true
                     },
                     {
-                        id: 'happiness_toy',
-                        name: 'Fun Toy',
-                        description: 'A toy that makes Dario happy',
+                        id: 'premium_steak',
+                        name: 'Premium Steak',
+                        description: 'Delicious steak that satisfies hunger completely',
                         price: 40,
-                        emoji: '🧸',
-                        available: false
+                        emoji: '🥩',
+                        available: false,
+                        comingSoon: true
                     },
                     {
-                        id: 'outfit_cool',
-                        name: 'Cool Outfit',
-                        description: 'Stylish clothes for Dario',
+                        id: 'monkey_painting',
+                        name: 'Monkey Painting',
+                        description: 'Artistic monkey painting for the apartment',
+                        price: 80,
+                        emoji: '🖼️',
+                        available: false,
+                        comingSoon: true
+                    },
+                    {
+                        id: 'dario_outfit',
+                        name: 'New Outfit for Dario',
+                        description: 'Stylish new clothes to make Dario look fresh',
                         price: 60,
                         emoji: '👕',
-                        available: false
+                        available: false,
+                        comingSoon: true
                     },
                     {
-                        id: 'decoration_plants',
-                        name: 'Plants',
-                        description: 'Beautiful plants for the apartment',
-                        price: 35,
-                        emoji: '🪴',
-                        available: false
+                        id: 'lulu_ring',
+                        name: 'Ring for Lulu',
+                        description: 'Beautiful engagement ring for Lulu ✨',
+                        price: 999,
+                        emoji: '💍',
+                        available: false,
+                        comingSoon: true
                     }
                 ]
             }
