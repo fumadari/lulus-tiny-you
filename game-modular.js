@@ -811,14 +811,46 @@ class TamagotchiGame {
     talk() {
         if (this.currentScreen !== 'main') return;
         
-        const messages = [
-            "I love you Lulu! 💕",
-            "You're the best! 🥰",
-            "Miss you! 😘",
-            "Let's play! 🎮",
-            "Thinking of you! 💭",
-            "You make me happy! 😊"
-        ];
+        // Get current time
+        const now = new Date();
+        const hour = now.getHours();
+        
+        let messages;
+        
+        // Time-based messages
+        if (hour >= 5 && hour < 12) {
+            // Morning messages (5 AM - 12 PM)
+            messages = [
+                "Good morning, beautiful! ☀️",
+                "Rise and shine, my love! 🌅",
+                "Morning sunshine! Hope you slept well! 😊",
+                "Good morning Lulu! Ready for a new day? 💕",
+                "Wake up sleepyhead! I missed you! 🥰",
+                "Morning my angel! Let's make today amazing! ✨"
+            ];
+        } else if (hour >= 21 || hour < 5) {
+            // Night messages (9 PM - 5 AM)
+            messages = [
+                "Goodnight my love! Sweet dreams! 🌙",
+                "Sleep well beautiful! I'll be here! 💕",
+                "Goodnight Lulu! Dream of me! 😘",
+                "Time for bed! Rest well my angel! 🌟",
+                "Sweet dreams! I love you so much! 💤",
+                "Goodnight gorgeous! See you tomorrow! ❤️"
+            ];
+        } else {
+            // Day messages (12 PM - 9 PM)
+            messages = [
+                "I love you Lulu! 💕",
+                "You're the best! 🥰",
+                "Miss you! 😘",
+                "Let's play! 🎮",
+                "Thinking of you! 💭",
+                "You make me happy! 😊",
+                "Hope you're having a great day! ☺️",
+                "You're amazing! 🌈"
+            ];
+        }
         
         const message = messages[Math.floor(Math.random() * messages.length)];
         this.ui.showNotification(message);
