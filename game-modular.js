@@ -317,6 +317,9 @@ class TamagotchiGame {
         // Update particles
         this.updateParticles(deltaTime);
         
+        // Update energy replenishment (every second)
+        this.updateEnergyReplenishment(deltaTime);
+        
         // Update UI
         this.ui.updateStatsBar(this.save.stats);
         this.ui.updateCurrency(this.save.currency, this.save.tokens);
@@ -403,6 +406,56 @@ class TamagotchiGame {
             particle.x += particle.vx * deltaTime / 16;
             return particle.life > 0;
         });
+    }
+    
+    updateEnergyReplenishment(deltaTime) {
+        // Initialize energy replenishment tracking if not exists
+        if (this.save.lastEnergyUpdate === undefined) {
+            this.save.lastEnergyUpdate = Date.now();
+        }
+        
+        const now = Date.now();
+        const timeSinceLastUpdate = now - this.save.lastEnergyUpdate;
+        
+        // Only update every 5 seconds (5000ms) to prevent too rapid changes
+        if (timeSinceLastUpdate >= 5000) {
+            let energyGain = 0;
+            
+            // Base energy recovery (very slow when hungry/tired)
+            if (this.save.stats.energy < 100) {
+                energyGain += 1; // Base recovery: 1 energy per 5 seconds
+                
+                // Bonus energy recovery when well-fed (hunger > 70)
+                if (this.save.stats.hunger > 70) {
+                    energyGain += 2; // Extra 2 energy when well-fed
+                }
+                
+                // Extra bonus when very well-fed (hunger > 90)
+                if (this.save.stats.hunger > 90) {
+                    energyGain += 1; // Extra 1 more energy when very well-fed
+                }
+                
+                // Penalty when very hungry (hunger < 30)
+                if (this.save.stats.hunger < 30) {
+                    energyGain = Math.max(0, energyGain - 2); // Recover much slower when hungry
+                }
+                
+                // Apply energy gain
+                this.save.stats.energy = Math.min(100, this.save.stats.energy + energyGain);
+                
+                // Debug log for testing
+                if (energyGain > 0) {
+                    console.log(`Energy replenished: +${energyGain} (hunger: ${this.save.stats.hunger}, energy: ${this.save.stats.energy})`);
+                }
+            }
+            
+            this.save.lastEnergyUpdate = now;
+            
+            // Save periodically to persist energy changes
+            if (Math.random() < 0.2) { // 20% chance to save each time
+                SaveManager.saveNow(this.save);
+            }
+        }
     }
     
     // Rendering
@@ -904,11 +957,20 @@ class TamagotchiGame {
             this.addParticles(this.sprite.x, this.sprite.y, '#00FF00', 15); // Green particles for calming
             heartsToAdd = Math.max(1, heartsToAdd); // Always give at least 1 heart for calming anger
         } else {
-            // Normal pet behavior - only affects happiness
+            // Normal pet behavior - affects happiness and small energy boost
             this.save.stats.happiness = Math.min(100, this.save.stats.happiness + STATS_CONFIG.INCREASE_AMOUNTS.PET);
             this.sprite.animation = 'happy';
             this.sound.play('pet');
             this.addParticles(this.sprite.x, this.sprite.y, '#FF69B4', 10);
+        }
+        
+        // Add small energy boost from petting (but limited)
+        if (this.save.petCount <= 3 && this.save.stats.energy < 100) {
+            const energyBoost = Math.min(3, 100 - this.save.stats.energy); // Max 3 energy per pet, only for first 3 pets
+            this.save.stats.energy += energyBoost;
+            if (energyBoost > 0) {
+                console.log(`Pet energy boost: +${energyBoost} energy`);
+            }
         }
         
         console.log(`Pet action: happiness ${oldHappiness} -> ${this.save.stats.happiness}`);
@@ -1273,6 +1335,12 @@ class TamagotchiGame {
     }
     
     openMap() {
+        // Check energy requirement for going out
+        if (this.save.stats.energy < 20) {
+            this.ui.showNotification("I'm too tired to go out! 😴 Need rest or food.");
+            return;
+        }
+        
         this.currentScreen = 'map';  // Use string like the original, not GAME_STATES.MAP
         
         // Ensure player is at valid location (UES street if position is invalid)
@@ -1306,6 +1374,13 @@ class TamagotchiGame {
     }
     
     startMinigame(gameType) {
+        // Check energy requirement for playing games
+        if (this.save.stats.energy < 15) {
+            this.ui.showNotification("I'm too tired to play games! 😴 Need rest or food.");
+            this.ui.toggleMenu(); // Close the menu
+            return;
+        }
+        
         // Check if this is a "coming soon" game
         if (['petRhythm', 'memory', 'trivia'].includes(gameType)) {
             const gameNames = {
