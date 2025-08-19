@@ -590,6 +590,11 @@ class TamagotchiGame {
         // Draw Dario in the bedroom
         this.drawCharacter(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 50, 4.0);
         
+        // Draw cat if owned
+        if (this.save.cat && this.save.cat.owned) {
+            this.drawCat();
+        }
+        
         // Bedroom status bubbles
         if (this.save.stats.hunger < 30) {
             this.drawSpeechBubble(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10, "Can we get food from Lulu's kitchen? 🍎");
@@ -651,10 +656,99 @@ class TamagotchiGame {
         this.ctx.fillText('💕', 300, 80);
         this.ctx.fillText('💕', 150, 120);
         
-        // Draw cat if purchased
-        if (this.save.shop && this.save.shop.purchases.includes('apartment_cat')) {
-            this.ctx.font = '30px serif';
-            this.ctx.fillText('🐱', 280, CANVAS_HEIGHT - 90); // Cat on the bed
+        // Old cat code removed - now using pixel art cat
+    }
+    
+    drawCat() {
+        if (!this.save.cat || !this.save.cat.owned) return;
+        
+        const catX = this.save.cat.x || 280;
+        const catY = this.save.cat.y || CANVAS_HEIGHT - 90;
+        const scale = 3; // Scale for pixel art
+        
+        // Save context for transformations
+        this.ctx.save();
+        this.ctx.translate(catX, catY);
+        this.ctx.scale(scale, scale);
+        
+        // Orange cat pixel art
+        const catColors = {
+            orange: '#FF8C00',
+            darkOrange: '#FF6347',
+            lightOrange: '#FFA500',
+            white: '#FFFFFF',
+            pink: '#FFB6C1',
+            black: '#000000',
+            green: '#00FF00'
+        };
+        
+        // Cat body (sitting position)
+        this.ctx.fillStyle = catColors.orange;
+        // Main body
+        this.ctx.fillRect(-6, -8, 12, 10);
+        // Head
+        this.ctx.fillRect(-5, -15, 10, 8);
+        
+        // Cat ears
+        this.ctx.fillStyle = catColors.darkOrange;
+        this.ctx.fillRect(-5, -16, 2, 3); // Left ear
+        this.ctx.fillRect(3, -16, 2, 3);  // Right ear
+        
+        // Inner ears
+        this.ctx.fillStyle = catColors.pink;
+        this.ctx.fillRect(-4, -15, 1, 1); // Left inner ear
+        this.ctx.fillRect(4, -15, 1, 1);  // Right inner ear
+        
+        // White chest/belly
+        this.ctx.fillStyle = catColors.white;
+        this.ctx.fillRect(-3, -6, 6, 6);
+        this.ctx.fillRect(-2, -12, 4, 4); // Face white
+        
+        // Eyes
+        this.ctx.fillStyle = catColors.green;
+        this.ctx.fillRect(-3, -13, 1, 1); // Left eye
+        this.ctx.fillRect(2, -13, 1, 1);  // Right eye
+        
+        // Nose
+        this.ctx.fillStyle = catColors.pink;
+        this.ctx.fillRect(0, -11, 1, 1);
+        
+        // Mouth
+        this.ctx.fillStyle = catColors.black;
+        this.ctx.fillRect(-1, -10, 1, 1);
+        this.ctx.fillRect(1, -10, 1, 1);
+        
+        // Stripes on orange parts
+        this.ctx.fillStyle = catColors.darkOrange;
+        this.ctx.fillRect(-4, -14, 8, 1); // Head stripe
+        this.ctx.fillRect(-5, -4, 10, 1);  // Body stripe
+        this.ctx.fillRect(-4, -1, 8, 1);   // Lower body stripe
+        
+        // Tail
+        this.ctx.fillStyle = catColors.orange;
+        this.ctx.fillRect(6, -6, 2, 8);
+        this.ctx.fillRect(7, -14, 1, 8); // Tail curve
+        
+        // Tail stripes
+        this.ctx.fillStyle = catColors.darkOrange;
+        this.ctx.fillRect(6, -4, 2, 1);
+        this.ctx.fillRect(6, -1, 2, 1);
+        
+        // Paws
+        this.ctx.fillStyle = catColors.white;
+        this.ctx.fillRect(-5, 1, 2, 2); // Left front paw
+        this.ctx.fillRect(3, 1, 2, 2);  // Right front paw
+        
+        this.ctx.restore();
+        
+        // Cat name label
+        if (this.save.cat.name) {
+            this.ctx.save();
+            this.ctx.font = '8px "Press Start 2P"';
+            this.ctx.fillStyle = '#FF69B4';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(this.save.cat.name, catX, catY - 45);
+            this.ctx.restore();
         }
     }
     
@@ -1464,11 +1558,11 @@ class TamagotchiGame {
             {
                 id: 'apartment_cat',
                 name: 'Lulu\'s Cat',
-                description: 'A cute cat that lives in Lulu\'s apartment',
+                description: 'A cute orange cat that will live in Lulu\'s apartment',
                 price: 50,
                 emoji: '🐱',
-                available: false,
-                comingSoon: true
+                available: true,
+                comingSoon: false
             },
             {
                 id: 'celcius_drink',
@@ -1606,10 +1700,80 @@ class TamagotchiGame {
     applyItemEffect(itemId) {
         switch(itemId) {
             case 'apartment_cat':
-                this.ui.showNotification("A cute cat now lives in Lulu's apartment! 🐱💕");
+                this.startCatNaming();
                 break;
             // Other items will be implemented when available
         }
+    }
+    
+    startCatNaming() {
+        // Initialize cat data if not exists
+        if (!this.save.cat) {
+            this.save.cat = {
+                owned: false,
+                name: '',
+                x: 200,
+                y: 180,
+                animation: 'idle'
+            };
+        }
+        
+        this.ui.showModal(
+            '🐱 Name Your Cat',
+            `Choose a name for Lulu's new orange cat:<br><br>
+            <input type="text" id="catNameInput" placeholder="Enter cat name..." maxlength="15" style="
+                width: 90%;
+                padding: 8px;
+                border: 2px solid #ff70a6;
+                border-radius: 5px;
+                background: #000;
+                color: #fff;
+                font-family: 'Press Start 2P', monospace;
+                font-size: 8px;
+                text-align: center;
+            "><br><br>`,
+            [
+                {
+                    text: 'Name Cat',
+                    action: () => {
+                        const input = document.getElementById('catNameInput');
+                        const catName = input?.value?.trim() || 'Whiskers';
+                        
+                        if (catName.length > 15) {
+                            this.ui.showNotification('Name too long! Max 15 characters.');
+                            return;
+                        }
+                        
+                        this.save.cat.owned = true;
+                        this.save.cat.name = catName;
+                        SaveManager.saveNow(this.save);
+                        
+                        this.ui.closeModal();
+                        this.ui.showNotification(`Welcome ${catName}! 🐱💕 Visit the apartment to see your new cat!`);
+                    }
+                },
+                {
+                    text: 'Random Name',
+                    action: () => {
+                        const randomNames = ['Whiskers', 'Ginger', 'Orange', 'Marmalade', 'Pumpkin', 'Rusty', 'Amber', 'Copper', 'Sunny', 'Mango'];
+                        const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+                        
+                        this.save.cat.owned = true;
+                        this.save.cat.name = randomName;
+                        SaveManager.saveNow(this.save);
+                        
+                        this.ui.closeModal();
+                        this.ui.showNotification(`Welcome ${randomName}! 🐱💕 Visit the apartment to see your new cat!`);
+                    }
+                }
+            ]
+        );
+        
+        // Focus on input after modal opens
+        setTimeout(() => {
+            const input = document.getElementById('catNameInput');
+            if (input) input.focus();
+        }, 100);
     }
     
     manualSave() {

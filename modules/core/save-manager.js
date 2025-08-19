@@ -50,17 +50,24 @@ export class SaveManager {
             overfed: false,
             overfedTime: 0,
             lastCriticalWarning: 0,
+            cat: {
+                owned: false,
+                name: '',
+                x: 200,
+                y: 180,
+                animation: 'idle'
+            },
             shop: {
                 purchases: [],
                 availableItems: [
                     {
                         id: 'apartment_cat',
                         name: 'Lulu\'s Cat',
-                        description: 'A cute cat that lives in Lulu\'s apartment',
+                        description: 'A cute orange cat that will live in Lulu\'s apartment',
                         price: 50,
                         emoji: '🐱',
-                        available: false,
-                        comingSoon: true
+                        available: true,
+                        comingSoon: false
                     },
                     {
                         id: 'celcius_drink',
