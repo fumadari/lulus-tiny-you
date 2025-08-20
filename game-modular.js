@@ -990,8 +990,23 @@ class TamagotchiGame {
     feed() {
         if (this.currentScreen !== 'main') return;
         
+        const oldHunger = this.save.stats.hunger;
         this.save.stats.hunger = Math.min(100, this.save.stats.hunger + STATS_CONFIG.INCREASE_AMOUNTS.FEED);
-        this.save.stats.happiness = Math.min(100, this.save.stats.happiness + 5);
+        
+        // Feeding restores some happiness, but not as much as direct petting/interaction
+        let happinessGain = 5; // Base happiness from food
+        
+        // More happiness if Dario was very hungry
+        if (oldHunger < 30) {
+            happinessGain += 10; // Extra happiness when very hungry
+        } else if (oldHunger < 50) {
+            happinessGain += 5; // Some extra happiness when moderately hungry
+        }
+        
+        // But food alone can't fully restore happiness - cap at reasonable level
+        const maxFoodHappiness = Math.min(70, this.save.stats.happiness + happinessGain);
+        this.save.stats.happiness = Math.min(100, maxFoodHappiness);
+        
         this.sprite.animation = 'eat';
         this.sound.play('eat');
         this.addParticles(this.sprite.x, this.sprite.y, '#FFD700', 10);
@@ -2210,11 +2225,35 @@ The better you care for him, the happier he'll be!
             // Stats decay while away (capped to not be too harsh)
             const hungerDecay = Math.min(50, minutesAway * 0.5); // 0.5 per minute
             const energyDecay = Math.min(40, minutesAway * 0.3); // 0.3 per minute  
-            const happyDecay = Math.min(30, minutesAway * 0.2);  // 0.2 per minute
+            
+            // Happiness decay - more noticeable and affected by other stats
+            let happyDecay = Math.min(40, minutesAway * 0.4);  // Increased to 0.4 per minute
+            
+            // Extra happiness decay if hungry or tired when away
+            const currentHunger = this.save.stats.hunger - hungerDecay;
+            const currentEnergy = this.save.stats.energy - energyDecay;
+            
+            if (currentHunger < 30) {
+                happyDecay += minutesAway * 0.2; // Extra decay when hungry
+            }
+            if (currentEnergy < 30) {
+                happyDecay += minutesAway * 0.1; // Extra decay when tired
+            }
+            
+            // Loneliness factor - happiness decays faster over time
+            if (minutesAway > 60) {
+                happyDecay += minutesAway * 0.1; // Extra loneliness decay after 1 hour
+            }
+            
+            // Cap happiness decay
+            happyDecay = Math.min(60, happyDecay);
             
             this.save.stats.hunger = Math.max(0, this.save.stats.hunger - hungerDecay);
             this.save.stats.energy = Math.max(0, this.save.stats.energy - energyDecay);
             this.save.stats.happiness = Math.max(0, this.save.stats.happiness - happyDecay);
+            
+            // Debug logging
+            console.log(`Offline decay: ${minutesAway} min - Hunger: -${hungerDecay}, Energy: -${energyDecay}, Happiness: -${happyDecay}`);
             
             // Show appropriate welcome back messages
             if (minutesAway > 60) {
