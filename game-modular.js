@@ -320,6 +320,9 @@ class TamagotchiGame {
         // Update energy replenishment (every second)
         this.updateEnergyReplenishment(deltaTime);
         
+        // Check for breakup condition (all stats at zero)
+        this.checkBreakupCondition();
+        
         // Update UI
         this.ui.updateStatsBar(this.save.stats);
         this.ui.updateCurrency(this.save.currency, this.save.tokens);
@@ -456,6 +459,82 @@ class TamagotchiGame {
                 SaveManager.saveNow(this.save);
             }
         }
+    }
+    
+    checkBreakupCondition() {
+        // Initialize breakup tracking if not exists
+        if (this.save.breakupWarned === undefined) {
+            this.save.breakupWarned = false;
+        }
+        
+        const stats = this.save.stats;
+        const allStatsZero = stats.hunger === 0 && stats.energy === 0 && stats.happiness === 0;
+        
+        if (allStatsZero) {
+            // Give one warning before breakup
+            if (!this.save.breakupWarned) {
+                this.save.breakupWarned = true;
+                this.ui.showNotification("💔 I'm feeling really neglected... Please take care of me or I might have to leave...");
+                SaveManager.saveNow(this.save);
+                return;
+            }
+            
+            // All stats are zero and warning was already given - trigger breakup
+            this.triggerBreakup();
+        } else if (this.save.breakupWarned) {
+            // Reset warning if stats improve
+            this.save.breakupWarned = false;
+        }
+    }
+    
+    triggerBreakup() {
+        // Prevent multiple breakups
+        if (this.breakupInProgress) return;
+        this.breakupInProgress = true;
+        
+        // Stop the game loop temporarily
+        this.gameRunning = false;
+        
+        this.showBreakupModal();
+    }
+    
+    showBreakupModal() {
+        this.ui.showModal(
+            '💔 Relationship Ended',
+            `I'm sorry, but I can't stay with someone who doesn't take care of me...<br><br>
+            When all my needs (hunger, energy, happiness) reach zero, I feel completely neglected.<br><br>
+            <strong>I'm going back to Italy. 🇮🇹</strong><br><br>
+            Your progress has been reset.<br>
+            Maybe next time you'll be a better partner? 😢`,
+            [
+                {
+                    text: 'Start Over',
+                    action: () => {
+                        this.resetGameProgress();
+                        this.ui.closeModal();
+                        this.ui.showNotification("Welcome to a fresh start... Please take better care of me this time. 🥺");
+                    }
+                }
+            ]
+        );
+    }
+    
+    resetGameProgress() {
+        // Create a completely fresh save
+        this.save = SaveManager.createDefaultSave();
+        this.save.breakupWarned = false;
+        
+        // Reset game state
+        this.currentScreen = 'main';
+        this.currentMinigame = null;
+        this.apartmentPromptShown = false;
+        this.breakupInProgress = false;
+        this.gameRunning = true;
+        
+        // Save the reset state
+        SaveManager.saveNow(this.save);
+        
+        console.log('Game progress reset due to breakup');
     }
     
     // Rendering

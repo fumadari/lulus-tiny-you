@@ -50,6 +50,7 @@ export class SaveManager {
             overfed: false,
             overfedTime: 0,
             lastCriticalWarning: 0,
+            breakupWarned: false,
             cat: {
                 owned: false,
                 name: '',
