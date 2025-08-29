@@ -8,6 +8,7 @@ import { SPRITES } from './modules/data/sprites.js';
 import { TRIVIA_QUESTIONS } from './modules/data/trivia-questions.js';
 import { UIManager } from './modules/ui/ui-manager.js';
 import { FeedFrenzy } from './modules/minigames/feed-frenzy.js';
+import { ConversationSystem } from './modules/hinge/conversation-system.js';
 
 // Use the NYC map data that's already loaded globally
 const NYC_MAP = window.NYC_MAP_LARGE;
@@ -31,6 +32,10 @@ class TamagotchiGame {
         // Initialize overfed timer if not exists
         if (this.save.overfedTime === undefined) this.save.overfedTime = 0;
         this.ui = new UIManager(this);
+        
+        // Initialize conversation system
+        this.conversationSystem = new ConversationSystem(this);
+        this.saveManager = SaveManager; // Make SaveManager accessible to conversation system
         
         // Game state
         this.currentScreen = 'main';  // Use string like original
@@ -1868,6 +1873,510 @@ class TamagotchiGame {
             const input = document.getElementById('catNameInput');
             if (input) input.focus();
         }, 100);
+    }
+    
+    // ===== HINGE DATING APP =====
+    
+    openHinge() {
+        // Initialize Hinge data if not exists
+        if (!this.save.hinge) {
+            this.save.hinge = {
+                currentProfileIndex: 0,
+                swipedProfiles: [],
+                matches: []
+            };
+        }
+        
+        this.showHingeInterface();
+    }
+    
+    getHingeProfiles() {
+        return [
+            {
+                id: 'french_lulu',
+                name: 'Lulu',
+                age: 28,
+                bio: 'Bonjour! French girl who loves Darios, cats, pizza from Mo, TJ Maxx finds, and tangerine juice 🇫🇷',
+                traits: ['French', 'Cat lover', 'Traveler'],
+                type: 'french'
+            },
+            {
+                id: 'foodie_lulu',
+                name: 'Foodie Lulu',
+                age: 28,
+                bio: 'Pizza from Mo is life! Also obsessed with Trader Joe\'s and tangerine juice 🍕',
+                traits: ['Foodie', 'TJ shopper', 'Pizza expert'],
+                type: 'foodie'
+            },
+            {
+                id: 'travel_lulu',
+                name: 'Travel Lulu',
+                age: 28,
+                bio: 'French explorer who loves pets and watching The Simpsons ✈️',
+                traits: ['Traveler', 'Pet lover', 'Simpsons fan'],
+                type: 'travel'
+            },
+            {
+                id: 'shopping_lulu',
+                name: 'Shopping Lulu',
+                age: 28,
+                bio: 'TJ Maxx treasure hunter with a cat obsession 🛍️',
+                traits: ['Bargain hunter', 'Cat mom', 'Stylish'],
+                type: 'shopping'
+            },
+            {
+                id: 'simpson_lulu',
+                name: 'Simpson Lulu',
+                age: 28,
+                bio: 'D\'oh! French girl who quotes Simpsons while sipping tangerine juice 🍊',
+                traits: ['Simpsons expert', 'French', 'Citrus lover'],
+                type: 'simpson'
+            },
+            {
+                id: 'rondoudou',
+                name: 'Rondoudou',
+                age: 25,
+                bio: 'Jigglypuff Pokémon who loves to sing and make everyone sleepy 🎵',
+                traits: ['Musical', 'Sleepy', 'Round'],
+                type: 'jigglypuff'
+            }
+        ];
+    }
+    
+    showHingeInterface() {
+        const profiles = this.getHingeProfiles();
+        const currentIndex = this.save.hinge.currentProfileIndex;
+        
+        if (currentIndex >= profiles.length) {
+            this.ui.showModal('💕 Hinge', 
+                `<div style="text-align: center; padding: 10px;">
+                    <div style="font-size: 10px; margin-bottom: 15px;">
+                        No more profiles to show! You've seen all the Lulus in your area. 😊
+                    </div>
+                    <div style="font-size: 8px; color: #666;">
+                        Want to reset and see them again?
+                    </div>
+                </div>`,
+                [
+                    { 
+                        text: 'Reset Profiles', 
+                        action: () => {
+                            this.resetHingeProfiles();
+                            this.ui.closeModal();
+                            this.showHingeInterface();
+                        }
+                    },
+                    { 
+                        text: 'Chat with Matches', 
+                        action: () => this.showMatchesList()
+                    },
+                    { 
+                        text: 'Close', 
+                        action: () => this.ui.closeModal() 
+                    }
+                ]
+            );
+            return;
+        }
+        
+        const currentProfile = profiles[currentIndex];
+        
+        this.ui.showModal('💕 Hinge Dating', 
+            this.generateHingeHTML(currentProfile),
+            [
+                { 
+                    text: '👎 Pass', 
+                    action: () => this.swipeLeft(currentProfile) 
+                },
+                { 
+                    text: '💖 Like', 
+                    action: () => this.swipeRight(currentProfile) 
+                },
+                { 
+                    text: 'Close App', 
+                    action: () => this.ui.closeModal() 
+                }
+            ]
+        );
+        
+        // Draw the profile picture after modal opens
+        setTimeout(() => this.drawLuluProfilePic(currentProfile.type), 100);
+    }
+    
+    resetHingeProfiles() {
+        this.save.hinge.currentProfileIndex = 0;
+        this.save.hinge.swipedProfiles = [];
+        this.save.hinge.matches = [];
+        SaveManager.saveNow(this.save);
+        this.ui.showNotification('Profiles reset! Fresh start! 💕');
+    }
+    
+    showMatchesList() {
+        if (!this.save.hinge.matches || this.save.hinge.matches.length === 0) {
+            this.ui.showModal('💕 Your Matches', 
+                'No matches yet! Keep swiping! 😊',
+                [{ text: 'OK', action: () => this.ui.closeModal() }]
+            );
+            return;
+        }
+        
+        const profiles = this.getHingeProfiles();
+        const matchProfiles = this.save.hinge.matches.map(matchId => 
+            profiles.find(p => p.id === matchId)
+        ).filter(Boolean);
+        
+        const matchButtons = matchProfiles.map(profile => ({
+            text: `Chat with ${profile.name}`,
+            action: () => {
+                this.ui.closeModal();
+                this.conversationSystem.startConversation(profile.id);
+            }
+        }));
+        
+        matchButtons.push({ text: 'Back', action: () => this.ui.closeModal() });
+        
+        this.ui.showModal('💕 Your Matches',
+            `<div style="text-align: center; padding: 10px;">
+                <div style="font-size: 10px; margin-bottom: 15px;">
+                    You have ${matchProfiles.length} matches!
+                </div>
+                <div style="font-size: 8px; color: #666;">
+                    Choose someone to chat with:
+                </div>
+            </div>`,
+            matchButtons
+        );
+    }
+    
+    generateHingeHTML(profile) {
+        return `
+            <div style="text-align: center; padding: 10px;">
+                <div style="margin-bottom: 15px;">
+                    <canvas id="luluProfilePic" width="160" height="200" style="
+                        border: 3px solid #ff70a6;
+                        border-radius: 10px;
+                        background: #f0f0f0;
+                    "></canvas>
+                </div>
+                
+                <div style="font-size: 12px; color: #ff70a6; margin-bottom: 8px;">
+                    <strong>${profile.name}, ${profile.age}</strong>
+                </div>
+                
+                <div style="font-size: 8px; color: #666; margin-bottom: 10px; line-height: 1.4;">
+                    "${profile.bio}"
+                </div>
+                
+                <div style="font-size: 7px; color: #888; margin-bottom: 10px;">
+                    ${profile.traits.join(' • ')}
+                </div>
+                
+                <div style="font-size: 6px; color: #aaa;">
+                    Swipe to choose! 💕
+                </div>
+            </div>
+        `;
+    }
+    
+    drawLuluProfilePic(type) {
+        const canvas = document.getElementById('luluProfilePic');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        
+        // Clear canvas
+        ctx.fillStyle = '#fce4ec';
+        ctx.fillRect(0, 0, 160, 200);
+        
+        // Scale for pixel art (bigger faces)
+        ctx.save();
+        ctx.translate(80, 100);
+        ctx.scale(6, 6);
+        
+        this.drawLuluVariant(ctx, type);
+        
+        ctx.restore();
+    }
+    
+    drawLuluVariant(ctx, type) {
+        const colors = {
+            // Skin tones
+            skin: '#FDBCB4',
+            skinShadow: '#F4A097',
+            // Hair colors (Lulu has black hair)
+            black: '#1C1C1C',
+            darkBlack: '#0A0A0A',
+            // Eyes (Lulu has blue eyes)
+            blue: '#4A90E2',
+            darkBlue: '#2E5C8A',
+            pupil: '#000000',
+            // Mouth
+            pink: '#FF69B4',
+            // Clothes
+            shirt: '#FF6B6B',
+            darkShirt: '#E74C3C'
+        };
+        
+        // Base Lulu template
+        this.drawBaseLulu(ctx, colors);
+        
+        // Type-specific variations
+        switch(type) {
+            case 'french':
+                this.drawFrenchLulu(ctx, colors);
+                break;
+            case 'foodie':
+                this.drawFoodieLulu(ctx, colors);
+                break;
+            case 'travel':
+                this.drawTravelLulu(ctx, colors);
+                break;
+            case 'shopping':
+                this.drawShoppingLulu(ctx, colors);
+                break;
+            case 'simpson':
+                this.drawSimpsonLulu(ctx, colors);
+                break;
+            case 'jigglypuff':
+                this.drawJigglypuff(ctx, colors);
+                break;
+        }
+    }
+    
+    drawBaseLulu(ctx, colors) {
+        // Head (oval)
+        ctx.fillStyle = colors.skin;
+        ctx.fillRect(-4, -8, 8, 6); // Main head
+        ctx.fillRect(-3, -9, 6, 1); // Top round
+        ctx.fillRect(-3, -2, 6, 1); // Bottom round
+        
+        // Hair (long black hair)
+        ctx.fillStyle = colors.black;
+        ctx.fillRect(-5, -10, 10, 4); // Main hair
+        ctx.fillRect(-4, -11, 8, 1); // Hair top
+        // Long hair extensions
+        ctx.fillRect(-6, -7, 2, 6); // Left long hair
+        ctx.fillRect(4, -7, 2, 6);  // Right long hair
+        ctx.fillRect(-5, -6, 1, 4); // Left hair flow
+        ctx.fillRect(4, -6, 1, 4);  // Right hair flow
+        
+        // Eyes (blue)
+        ctx.fillStyle = colors.blue;
+        ctx.fillRect(-3, -6, 2, 1); // Left eye (bigger)
+        ctx.fillRect(1, -6, 2, 1);  // Right eye (bigger)
+        
+        // Eye pupils
+        ctx.fillStyle = colors.pupil;
+        ctx.fillRect(-3, -6, 1, 1); // Left pupil (small)
+        ctx.fillRect(2, -6, 1, 1);  // Right pupil (small)
+        
+        // Nose
+        ctx.fillStyle = colors.skinShadow;
+        ctx.fillRect(0, -5, 1, 1);
+        
+        // Mouth
+        ctx.fillStyle = colors.pink;
+        ctx.fillRect(-1, -3, 2, 1);
+        
+        // Body
+        ctx.fillStyle = colors.shirt;
+        ctx.fillRect(-3, -1, 6, 5); // Main body
+        
+        // Arms
+        ctx.fillStyle = colors.skin;
+        ctx.fillRect(-5, 0, 2, 3); // Left arm
+        ctx.fillRect(3, 0, 2, 3);  // Right arm
+    }
+    
+    drawFrenchLulu(ctx, colors) {
+        // Beret
+        ctx.fillStyle = '#000080';
+        ctx.fillRect(-3, -11, 6, 2); // Navy beret
+        ctx.fillRect(-2, -12, 4, 1); // Beret top
+        
+        // French flag colors in hair
+        ctx.fillStyle = '#0055A4'; // Blue
+        ctx.fillRect(-4, -9, 1, 1);
+        ctx.fillStyle = '#FFFFFF'; // White
+        ctx.fillRect(-3, -9, 1, 1);
+        ctx.fillStyle = '#EF4135'; // Red
+        ctx.fillRect(-2, -9, 1, 1);
+        
+        // Sophisticated smile
+        ctx.fillStyle = colors.pink;
+        ctx.fillRect(-1, -3, 3, 1);
+    }
+    
+    drawFoodieLulu(ctx, colors) {
+        // Pizza slice in hair
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-1, -11, 2, 1); // Pizza crust
+        ctx.fillStyle = '#FF6347';
+        ctx.fillRect(-1, -10, 2, 1); // Tomato sauce
+        
+        // Chef's hat
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(-2, -12, 4, 2); // Chef hat
+        
+        // Happy eating expression
+        ctx.fillStyle = colors.pink;
+        ctx.fillRect(-2, -3, 4, 1); // Big food smile
+    }
+    
+    drawTravelLulu(ctx, colors) {
+        // Travel backpack straps
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(-4, 0, 1, 3); // Left strap
+        ctx.fillRect(3, 0, 1, 3);  // Right strap
+        
+        // Airplane pin in hair
+        ctx.fillStyle = '#C0C0C0';
+        ctx.fillRect(-1, -10, 2, 1); // Plane body
+        ctx.fillRect(-2, -10, 1, 1); // Left wing
+        ctx.fillRect(1, -10, 1, 1);  // Right wing
+        
+        // Adventurous smile
+        ctx.fillStyle = colors.pink;
+        ctx.fillRect(-2, -3, 4, 1);
+    }
+    
+    drawShoppingLulu(ctx, colors) {
+        // Shopping bag accessory
+        ctx.fillStyle = '#FF1493';
+        ctx.fillRect(4, 1, 2, 2); // Shopping bag
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(4, 0, 2, 1); // Bag handle
+        
+        // Fashionable hair accessories
+        ctx.fillStyle = '#FF69B4';
+        ctx.fillRect(-3, -10, 1, 1); // Pink accessory
+        ctx.fillStyle = '#9370DB';
+        ctx.fillRect(2, -10, 1, 1);  // Purple accessory
+        
+        // Stylish smile
+        ctx.fillStyle = colors.pink;
+        ctx.fillRect(-1, -3, 2, 1);
+    }
+    
+    drawSimpsonLulu(ctx, colors) {
+        // Yellow hair like Simpsons
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-5, -10, 10, 4); // Bright yellow hair
+        ctx.fillRect(-4, -11, 8, 1);
+        
+        // D'oh! expression bubble
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(5, -8, 3, 2); // Speech bubble
+        
+        // Simpsons-style smile
+        ctx.fillStyle = colors.pink;
+        ctx.fillRect(-2, -3, 4, 1);
+    }
+    
+    drawJigglypuff(ctx, colors) {
+        // Pink Jigglypuff colors
+        const jigglypuffColors = {
+            pink: '#FFB3DA',
+            darkPink: '#FF69B4',
+            eyes: '#87CEEB',
+            pupil: '#000000'
+        };
+        
+        // Round pink body (Jigglypuff is very round!)
+        ctx.fillStyle = jigglypuffColors.pink;
+        ctx.fillRect(-5, -8, 10, 8); // Bigger round body
+        ctx.fillRect(-4, -9, 8, 1);  // Top curve
+        ctx.fillRect(-4, 0, 8, 1);   // Bottom curve
+        
+        // Jigglypuff's signature hair tuft
+        ctx.fillStyle = jigglypuffColors.darkPink;
+        ctx.fillRect(-1, -11, 2, 2); // Hair tuft
+        
+        // Large round eyes
+        ctx.fillStyle = jigglypuffColors.eyes;
+        ctx.fillRect(-3, -6, 2, 2); // Left eye (bigger)
+        ctx.fillRect(1, -6, 2, 2);  // Right eye (bigger)
+        
+        // Eye pupils
+        ctx.fillStyle = jigglypuffColors.pupil;
+        ctx.fillRect(-2, -5, 1, 1); // Left pupil
+        ctx.fillRect(2, -5, 1, 1);  // Right pupil
+        
+        // Jigglypuff's small mouth
+        ctx.fillStyle = jigglypuffColors.darkPink;
+        ctx.fillRect(-1, -3, 2, 1);
+        
+        // No arms/body - Jigglypuff is just a round ball!
+    }
+    
+    swipeLeft(profile) {
+        this.save.hinge.swipedProfiles.push({
+            id: profile.id,
+            action: 'pass',
+            timestamp: Date.now()
+        });
+        this.save.hinge.currentProfileIndex++;
+        this.ui.showNotification(`You passed on ${profile.name} 👎`);
+        SaveManager.saveNow(this.save);
+        
+        setTimeout(() => {
+            this.ui.closeModal();
+            this.showHingeInterface();
+        }, 1000);
+    }
+    
+    swipeRight(profile) {
+        this.save.hinge.swipedProfiles.push({
+            id: profile.id,
+            action: 'like',
+            timestamp: Date.now()
+        });
+        this.save.hinge.matches.push(profile.id);
+        this.save.hinge.currentProfileIndex++;
+        
+        // Add hearts for matches
+        this.save.currency.hearts += 5;
+        
+        let matchMessage = `It's a match with ${profile.name}! 💖 +5 hearts`;
+        if (profile.id === 'rondoudou') {
+            matchMessage = `Rondoudou wants to sing you to sleep! 🎵 +5 hearts`;
+        }
+        
+        this.ui.showNotification(matchMessage);
+        SaveManager.saveNow(this.save);
+        
+        // Start conversation after match
+        setTimeout(() => {
+            this.ui.closeModal();
+            this.ui.showModal(
+                '💕 Match!',
+                `<div style="text-align: center; padding: 10px;">
+                    <div style="font-size: 10px; margin-bottom: 15px;">
+                        You matched with ${profile.name}!
+                    </div>
+                    <div style="font-size: 8px; color: #666;">
+                        Ready to start chatting?
+                    </div>
+                </div>`,
+                [
+                    { 
+                        text: 'Start Chatting 💬', 
+                        action: () => {
+                            this.ui.closeModal();
+                            this.conversationSystem.startConversation(profile.id);
+                        }
+                    },
+                    { 
+                        text: 'Maybe Later', 
+                        action: () => {
+                            this.ui.closeModal();
+                            this.showHingeInterface();
+                        }
+                    }
+                ]
+            );
+        }, 1500);
     }
     
     manualSave() {
