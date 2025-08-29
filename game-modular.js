@@ -2050,8 +2050,8 @@ class TamagotchiGame {
     
     generateHingeHTML(profile) {
         return `
-            <div style="text-align: center; padding: 10px;">
-                <div style="margin-bottom: 15px;">
+            <div style="text-align: center; padding: 15px;">
+                <div style="margin-bottom: 20px;">
                     <canvas id="luluProfilePic" width="160" height="200" style="
                         border: 3px solid #ff70a6;
                         border-radius: 10px;
@@ -2059,19 +2059,19 @@ class TamagotchiGame {
                     "></canvas>
                 </div>
                 
-                <div style="font-size: 12px; color: #ff70a6; margin-bottom: 8px;">
-                    <strong>${profile.name}, ${profile.age}</strong>
+                <div style="font-size: 12px; color: #ff70a6; margin-bottom: 12px; font-weight: bold;">
+                    ${profile.name}, ${profile.age}
                 </div>
                 
-                <div style="font-size: 8px; color: #666; margin-bottom: 10px; line-height: 1.4;">
+                <div style="font-size: 9px; color: #666; margin-bottom: 15px; line-height: 1.6; max-width: 250px; margin-left: auto; margin-right: auto;">
                     "${profile.bio}"
                 </div>
                 
-                <div style="font-size: 7px; color: #888; margin-bottom: 10px;">
+                <div style="font-size: 8px; color: #888; margin-bottom: 15px; line-height: 1.4;">
                     ${profile.traits.join(' • ')}
                 </div>
                 
-                <div style="font-size: 6px; color: #aaa;">
+                <div style="font-size: 7px; color: #aaa; margin-top: 10px;">
                     Swipe to choose! 💕
                 </div>
             </div>
