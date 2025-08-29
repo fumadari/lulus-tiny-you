@@ -85,11 +85,11 @@ export class ConversationSystem {
                         ]
                     },
                     {
-                        text: "What's your perfect shopping companion?",
+                        text: "How would you describe my style?",
                         options: [
-                            { text: "My credit card", correct: false, response: "Money isn't everything! 💳😅" },
-                            { text: "My cat for moral support", correct: true, response: "Cats have great fashion sense! Purr-fect taste! 🐱👗" },
-                            { text: "Shopping alone", correct: false, response: "But it's more fun with company! 👥" }
+                            { text: "Stylish and fashionable", correct: true, response: "Thank you! I work hard on my look! 👗✨" },
+                            { text: "A bit chubby but well-dressed", correct: false, response: "That's incredibly hurtful and inappropriate to say!" },
+                            { text: "Trendy and confident", correct: true, response: "Confidence is the best accessory! 💃💕" }
                         ]
                     }
                 ]
@@ -119,19 +119,19 @@ export class ConversationSystem {
                 name: 'Rondoudou',
                 questions: [
                     {
-                        text: "Rondoudou rondoudou? 🎵 (What happens when I sing?)",
+                        text: "Rondoudou rondoudou? 🎵",
                         options: [
-                            { text: "Everyone dances!", correct: false, response: "Rondoudou rondoudou! 😴 (No, they fall asleep!)" },
-                            { text: "Everyone falls asleep", correct: true, response: "Rondoudou rondoudou! 🌙💤 (That's right! Sweet dreams!)" },
-                            { text: "Everyone runs away", correct: false, response: "Rondoudou... 😢 (That's mean! My song is beautiful!)" }
+                            { text: "Everyone dances!", correct: false, response: "Rondoudou rondoudou! 😴" },
+                            { text: "Everyone falls asleep", correct: true, response: "Rondoudou rondoudou! 🌙💤" },
+                            { text: "Everyone runs away", correct: false, response: "Rondoudou... 😢" }
                         ]
                     },
                     {
-                        text: "Rondoudou rondoudou rondoudou? (What do I use to sing my lullabies?)",
+                        text: "Rondoudou rondoudou rondoudou?",
                         options: [
-                            { text: "A microphone", correct: false, response: "Rondoudou! 🎤❌ (I don't need technology!)" },
-                            { text: "My magical voice", correct: true, response: "Rondoudou rondoudou! ✨🎵 (My voice is my superpower!)" },
-                            { text: "A guitar", correct: false, response: "Rondoudou rondoudou! 🎸❌ (Just my voice!)" }
+                            { text: "A microphone", correct: false, response: "Rondoudou! 🎤❌" },
+                            { text: "My magical voice", correct: true, response: "Rondoudou rondoudou! ✨🎵" },
+                            { text: "A guitar", correct: false, response: "Rondoudou rondoudou! 🎸❌" }
                         ]
                     }
                 ]
@@ -213,7 +213,18 @@ export class ConversationSystem {
             this.game.save.currency.hearts += 2;
             this.game.ui.showNotification(`Great answer! ${conversation.name} likes that! 💕 +2 hearts`);
         } else {
-            this.game.ui.showNotification(`${option.response} 😅`);
+            // Wrong answer - lose hearts
+            this.game.save.currency.hearts = Math.max(0, this.game.save.currency.hearts - 2);
+            
+            // Special penalty for calling someone chubby
+            let heartPenalty = -2;
+            if (option.text.toLowerCase().includes('chubby') || option.text.toLowerCase().includes('fat')) {
+                this.game.save.currency.hearts = Math.max(0, this.game.save.currency.hearts - 3); // Additional penalty
+                heartPenalty = -5;
+                this.game.ui.showNotification(`${option.response} That's really rude! 😡 ${heartPenalty} hearts`);
+            } else {
+                this.game.ui.showNotification(`${option.response} 😅 -2 hearts`);
+            }
         }
 
         state.currentQuestion++;

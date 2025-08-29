@@ -1898,7 +1898,8 @@ class TamagotchiGame {
                 age: 28,
                 bio: 'Bonjour! French girl who loves Darios, cats, pizza from Mo, TJ Maxx finds, and tangerine juice 🇫🇷',
                 traits: ['French', 'Cat lover', 'Traveler'],
-                type: 'french'
+                type: 'french',
+                likesYou: true
             },
             {
                 id: 'foodie_lulu',
@@ -1906,7 +1907,8 @@ class TamagotchiGame {
                 age: 28,
                 bio: 'Pizza from Mo is life! Also obsessed with Trader Joe\'s and tangerine juice 🍕',
                 traits: ['Foodie', 'TJ shopper', 'Pizza expert'],
-                type: 'foodie'
+                type: 'foodie',
+                likesYou: false
             },
             {
                 id: 'travel_lulu',
@@ -1914,7 +1916,8 @@ class TamagotchiGame {
                 age: 28,
                 bio: 'French explorer who loves pets and watching The Simpsons ✈️',
                 traits: ['Traveler', 'Pet lover', 'Simpsons fan'],
-                type: 'travel'
+                type: 'travel',
+                likesYou: true
             },
             {
                 id: 'shopping_lulu',
@@ -1922,7 +1925,8 @@ class TamagotchiGame {
                 age: 28,
                 bio: 'TJ Maxx treasure hunter with a cat obsession 🛍️',
                 traits: ['Bargain hunter', 'Cat mom', 'Stylish'],
-                type: 'shopping'
+                type: 'shopping',
+                likesYou: false
             },
             {
                 id: 'simpson_lulu',
@@ -1930,15 +1934,17 @@ class TamagotchiGame {
                 age: 28,
                 bio: 'D\'oh! French girl who quotes Simpsons while sipping tangerine juice 🍊',
                 traits: ['Simpsons expert', 'French', 'Citrus lover'],
-                type: 'simpson'
+                type: 'simpson',
+                likesYou: true
             },
             {
                 id: 'rondoudou',
                 name: 'Rondoudou',
                 age: 25,
-                bio: 'Jigglypuff Pokémon who loves to sing and make everyone sleepy 🎵',
-                traits: ['Musical', 'Sleepy', 'Round'],
-                type: 'jigglypuff'
+                bio: 'Rondoudou rondoudou rondoudou rondoudou... 🎵',
+                traits: ['Rondoudou', 'Rondoudou', 'Rondoudou'],
+                type: 'jigglypuff',
+                likesYou: true
             }
         ];
     }
@@ -2328,51 +2334,70 @@ class TamagotchiGame {
             action: 'like',
             timestamp: Date.now()
         });
-        this.save.hinge.matches.push(profile.id);
         this.save.hinge.currentProfileIndex++;
         
-        // Add hearts for matches
-        this.save.currency.hearts += 5;
-        
-        let matchMessage = `It's a match with ${profile.name}! 💖 +5 hearts`;
-        if (profile.id === 'rondoudou') {
-            matchMessage = `Rondoudou wants to sing you to sleep! 🎵 +5 hearts`;
+        // Check if they like you back
+        if (profile.likesYou) {
+            // It's a match!
+            this.save.hinge.matches.push(profile.id);
+            this.save.currency.hearts += 5;
+            
+            let matchMessage = `It's a match with ${profile.name}! 💖 +5 hearts`;
+            if (profile.id === 'rondoudou') {
+                matchMessage = `Rondoudou rondoudou! 🎵 +5 hearts`;
+            }
+            
+            this.ui.showNotification(matchMessage);
+            SaveManager.saveNow(this.save);
+            
+            // Start conversation after match
+            setTimeout(() => {
+                this.ui.closeModal();
+                this.ui.showModal(
+                    '💕 Match!',
+                    `<div style="text-align: center; padding: 10px;">
+                        <div style="font-size: 10px; margin-bottom: 15px;">
+                            You matched with ${profile.name}!
+                        </div>
+                        <div style="font-size: 8px; color: #666;">
+                            Ready to start chatting?
+                        </div>
+                    </div>`,
+                    [
+                        { 
+                            text: 'Start Chatting 💬', 
+                            action: () => {
+                                this.ui.closeModal();
+                                this.conversationSystem.startConversation(profile.id);
+                            }
+                        },
+                        { 
+                            text: 'Maybe Later', 
+                            action: () => {
+                                this.ui.closeModal();
+                                this.showHingeInterface();
+                            }
+                        }
+                    ]
+                );
+            }, 1500);
+        } else {
+            // Rejection! Lose hearts
+            this.save.currency.hearts = Math.max(0, this.save.currency.hearts - 3);
+            
+            let rejectionMessage = `${profile.name} isn't interested... 😔 -3 hearts`;
+            if (profile.id === 'rondoudou') {
+                rejectionMessage = `Rondoudou rondoudou... 😢 -3 hearts`;
+            }
+            
+            this.ui.showNotification(rejectionMessage);
+            SaveManager.saveNow(this.save);
+            
+            setTimeout(() => {
+                this.ui.closeModal();
+                this.showHingeInterface();
+            }, 1500);
         }
-        
-        this.ui.showNotification(matchMessage);
-        SaveManager.saveNow(this.save);
-        
-        // Start conversation after match
-        setTimeout(() => {
-            this.ui.closeModal();
-            this.ui.showModal(
-                '💕 Match!',
-                `<div style="text-align: center; padding: 10px;">
-                    <div style="font-size: 10px; margin-bottom: 15px;">
-                        You matched with ${profile.name}!
-                    </div>
-                    <div style="font-size: 8px; color: #666;">
-                        Ready to start chatting?
-                    </div>
-                </div>`,
-                [
-                    { 
-                        text: 'Start Chatting 💬', 
-                        action: () => {
-                            this.ui.closeModal();
-                            this.conversationSystem.startConversation(profile.id);
-                        }
-                    },
-                    { 
-                        text: 'Maybe Later', 
-                        action: () => {
-                            this.ui.closeModal();
-                            this.showHingeInterface();
-                        }
-                    }
-                ]
-            );
-        }, 1500);
     }
     
     manualSave() {
