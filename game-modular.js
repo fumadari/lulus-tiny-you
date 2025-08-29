@@ -2050,29 +2050,25 @@ class TamagotchiGame {
     
     generateHingeHTML(profile) {
         return `
-            <div style="text-align: center; padding: 15px;">
-                <div style="margin-bottom: 20px;">
-                    <canvas id="luluProfilePic" width="160" height="200" style="
+            <div style="text-align: center; padding: 12px;">
+                <div style="margin-bottom: 12px;">
+                    <canvas id="luluProfilePic" width="140" height="170" style="
                         border: 3px solid #ff70a6;
                         border-radius: 10px;
                         background: #f0f0f0;
                     "></canvas>
                 </div>
                 
-                <div style="font-size: 12px; color: #ff70a6; margin-bottom: 12px; font-weight: bold;">
+                <div style="font-size: 12px; color: #ff70a6; margin-bottom: 8px; font-weight: bold;">
                     ${profile.name}, ${profile.age}
                 </div>
                 
-                <div style="font-size: 9px; color: #666; margin-bottom: 15px; line-height: 1.6; max-width: 250px; margin-left: auto; margin-right: auto;">
+                <div style="font-size: 9px; color: #666; margin-bottom: 10px; line-height: 1.5; max-width: 230px; margin-left: auto; margin-right: auto;">
                     "${profile.bio}"
                 </div>
                 
-                <div style="font-size: 8px; color: #888; margin-bottom: 15px; line-height: 1.4;">
+                <div style="font-size: 8px; color: #888; line-height: 1.3;">
                     ${profile.traits.join(' • ')}
-                </div>
-                
-                <div style="font-size: 7px; color: #aaa; margin-top: 10px;">
-                    Swipe to choose! 💕
                 </div>
             </div>
         `;
@@ -2087,12 +2083,12 @@ class TamagotchiGame {
         
         // Clear canvas
         ctx.fillStyle = '#fce4ec';
-        ctx.fillRect(0, 0, 160, 200);
+        ctx.fillRect(0, 0, 140, 170);
         
-        // Scale for pixel art (bigger faces)
+        // Scale for pixel art (slightly smaller but still clear)
         ctx.save();
-        ctx.translate(80, 100);
-        ctx.scale(6, 6);
+        ctx.translate(70, 85);
+        ctx.scale(5, 5);
         
         this.drawLuluVariant(ctx, type);
         
