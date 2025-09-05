@@ -50,7 +50,11 @@ Directory Structure
 
 Version
 -------
-- Current: v1.14 — Adds rejection system in dating (not all profiles like you), with heart penalties for wrong/inappropriate answers.
+- Current: v1.15 (September 4, 2025)
+  - PWA: Register service worker from modular entry for offline/install.
+  - Dev: Align local dev server to port 8000.
+  - Docs: Add project README with architecture and usage.
+  - Prior: v1.14 — Dating rejections + penalties for wrong/inappropriate answers.
 
 Contributing & Next Steps
 -------------------------
@@ -64,4 +68,3 @@ Contributing & Next Steps
 License
 -------
 MIT
-
