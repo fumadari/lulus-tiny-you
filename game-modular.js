@@ -42,6 +42,19 @@ class TamagotchiGame {
         this.romanceBattle = new RomanceBattle(this);
         this.romanceBattle.loadPlayerStats();
         
+        // Battle girl locations in NYC
+        this.battleGirls = [
+            { id: 'zoe', name: 'Zoe', type: 'Artsy', x: 15, y: 25, sprite: '👩‍🎨' }, // Brooklyn
+            { id: 'madison', name: 'Madison', type: 'Corporate', x: 35, y: 20, sprite: '👩‍💼' }, // Manhattan
+            { id: 'tiffany', name: 'Tiffany', type: 'Fitness', x: 45, y: 35, sprite: '💪' }, // Queens
+            { id: 'brooklyn_girl', name: 'Brooklyn', type: 'Culinary', x: 12, y: 30, sprite: '🍕' }, // Williamsburg
+            { id: 'skyler', name: 'Skyler', type: 'Creative', x: 22, y: 28, sprite: '🎸' }, // East Village
+            { id: 'chanel', name: 'Chanel', type: 'Elite', x: 25, y: 12, sprite: '💎' } // Upper East Side
+        ];
+        
+        this.nearbyBattleGirl = null;
+        this.battleButtonVisible = false;
+        
         // Game state
         this.currentScreen = 'main';  // Use string like original
         this.lastUpdateTime = Date.now();
@@ -665,6 +678,59 @@ class TamagotchiGame {
             this.camera,
             NYC_MAP
         );
+        
+        // Render battle girls
+        this.renderBattleGirls();
+    }
+    
+    renderBattleGirls() {
+        if (!this.battleGirls) return;
+        
+        const tileSize = 24;
+        this.battleGirls.forEach(girl => {
+            const worldX = girl.x * tileSize;
+            const worldY = girl.y * tileSize;
+            
+            const screenX = worldX - this.camera.x;
+            const screenY = worldY - this.camera.y;
+            
+            // Only render if on screen
+            if (screenX >= -tileSize && screenX <= CANVAS_WIDTH &&
+                screenY >= -tileSize && screenY <= CANVAS_HEIGHT) {
+                
+                // Draw girl sprite
+                this.ctx.font = `${tileSize}px Arial`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                
+                // Shadow
+                this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                this.ctx.fillText(girl.sprite, screenX + tileSize/2 + 1, screenY + tileSize/2 + 1);
+                
+                // Main sprite
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillText(girl.sprite, screenX + tileSize/2, screenY + tileSize/2);
+                
+                // Draw name
+                this.ctx.font = '8px Arial';
+                this.ctx.fillStyle = '#ff1744';
+                this.ctx.fillText(girl.name, screenX + tileSize/2, screenY - 5);
+                
+                // Draw pulsing circle if player is nearby
+                const playerX = this.save.player.x;
+                const playerY = this.save.player.y;
+                const distance = Math.abs(playerX - girl.x) + Math.abs(playerY - girl.y);
+                
+                if (distance <= 2) {
+                    const pulse = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
+                    this.ctx.strokeStyle = `rgba(255, 23, 68, ${pulse})`;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenX + tileSize/2, screenY + tileSize/2, tileSize/2 + 5, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+            }
+        });
     }
     
     renderApartment() {
@@ -2697,10 +2763,8 @@ The better you care for him, the happier he'll be!
                 // Check for NPC interactions
                 this.checkNPCInteraction();
                 
-                // Check for random romance battle encounters (only on roads/streets)
-                if (tile === 1 && !this.romanceBattle.isActive) { // Road tile
-                    this.romanceBattle.triggerRandomEncounter();
-                }
+                // Check for battle girl proximity
+                this.checkBattleGirlProximity();
                 
                 // Debug log
                 console.log(`Player moved to: ${this.save.player.x}, ${this.save.player.y}`);
@@ -2783,6 +2847,96 @@ The better you care for him, the happier he'll be!
                 // stationary NPCs don't move
             }
         });
+    }
+    
+    checkBattleGirlProximity() {
+        if (this.romanceBattle.isActive) {
+            this.hideBattleButton();
+            return;
+        }
+        
+        let nearGirl = null;
+        const playerX = this.save.player.x;
+        const playerY = this.save.player.y;
+        
+        // Check if player is within 2 tiles of any battle girl
+        for (const girl of this.battleGirls) {
+            const distance = Math.abs(playerX - girl.x) + Math.abs(playerY - girl.y);
+            if (distance <= 2) {
+                nearGirl = girl;
+                break;
+            }
+        }
+        
+        if (nearGirl && nearGirl !== this.nearbyBattleGirl) {
+            this.nearbyBattleGirl = nearGirl;
+            this.showBattleButton(nearGirl);
+        } else if (!nearGirl && this.nearbyBattleGirl) {
+            this.nearbyBattleGirl = null;
+            this.hideBattleButton();
+        }
+    }
+    
+    showBattleButton(girl) {
+        // Remove existing button if any
+        this.hideBattleButton();
+        
+        const battleButtonHTML = `
+            <div id="battleButton" style="
+                position: absolute;
+                bottom: 60px;
+                right: 10px;
+                pointer-events: auto;
+                z-index: 20;
+                animation: bounce 1s infinite;
+            ">
+                <button class="control-btn" onclick="game.startBattleWithGirl('${girl.id}')" style="
+                    background: linear-gradient(135deg, #ff1744, #d50000);
+                    border: 2px solid #b71c1c;
+                    min-width: 80px;
+                    padding: 12px 8px;
+                    box-shadow: 0 4px 12px rgba(255, 23, 68, 0.4);
+                ">
+                    <div class="icon" style="font-size: 14px;">${girl.sprite}</div>
+                    <div style="font-size: 6px; margin-top: 2px;">FIGHT ${girl.name.toUpperCase()}</div>
+                </button>
+            </div>
+            <style>
+                @keyframes bounce {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-5px); }
+                }
+            </style>
+        `;
+        
+        const screenElement = document.querySelector('.screen');
+        screenElement.insertAdjacentHTML('beforeend', battleButtonHTML);
+        this.battleButtonVisible = true;
+    }
+    
+    hideBattleButton() {
+        const battleButton = document.getElementById('battleButton');
+        if (battleButton) {
+            battleButton.remove();
+        }
+        this.battleButtonVisible = false;
+    }
+    
+    startBattleWithGirl(girlId) {
+        const girl = this.battleGirls.find(g => g.id === girlId);
+        if (girl && !this.romanceBattle.isActive) {
+            // Create opponent data matching the romance battle system
+            const opponentData = this.romanceBattle.getRandomOpponent();
+            const specificOpponent = this.romanceBattle.getRandomOpponent(); // Get a fresh one
+            
+            // Override with the specific girl we want to fight
+            specificOpponent.name = girl.name;
+            specificOpponent.type = girl.type;
+            specificOpponent.sprite = girl.sprite;
+            
+            this.hideBattleButton();
+            this.romanceBattle.startBattle(specificOpponent);
+        }
     }
     
     checkNPCInteraction() {
