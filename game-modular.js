@@ -9,6 +9,7 @@ import { TRIVIA_QUESTIONS } from './modules/data/trivia-questions.js';
 import { UIManager } from './modules/ui/ui-manager.js';
 import { FeedFrenzy } from './modules/minigames/feed-frenzy.js';
 import { ConversationSystem } from './modules/hinge/conversation-system.js';
+import { RomanceBattle } from './modules/battle/romance-battle.js';
 
 // Use the NYC map data that's already loaded globally
 const NYC_MAP = window.NYC_MAP_LARGE;
@@ -36,6 +37,10 @@ class TamagotchiGame {
         // Initialize conversation system
         this.conversationSystem = new ConversationSystem(this);
         this.saveManager = SaveManager; // Make SaveManager accessible to conversation system
+        
+        // Initialize romance battle system
+        this.romanceBattle = new RomanceBattle(this);
+        this.romanceBattle.loadPlayerStats();
         
         // Game state
         this.currentScreen = 'main';  // Use string like original
@@ -2692,6 +2697,11 @@ The better you care for him, the happier he'll be!
                 // Check for NPC interactions
                 this.checkNPCInteraction();
                 
+                // Check for random romance battle encounters (only on roads/streets)
+                if (tile === 1 && !this.romanceBattle.isActive) { // Road tile
+                    this.romanceBattle.triggerRandomEncounter();
+                }
+                
                 // Debug log
                 console.log(`Player moved to: ${this.save.player.x}, ${this.save.player.y}`);
             } else {
@@ -3062,6 +3072,13 @@ window.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(renderLoop);
     }
     renderLoop();
+    
+    // Add test method to global game object
+    window.game.testRomanceBattle = function() {
+        if (!this.romanceBattle.isActive) {
+            this.romanceBattle.startBattle();
+        }
+    };
 
     // Register service worker for PWA/offline support (modular entry)
     try {
