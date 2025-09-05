@@ -3062,4 +3062,15 @@ window.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(renderLoop);
     }
     renderLoop();
+
+    // Register service worker for PWA/offline support (modular entry)
+    try {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.warn('Service worker registration failed:', err);
+            });
+        }
+    } catch (e) {
+        console.warn('Service worker registration error:', e);
+    }
 });

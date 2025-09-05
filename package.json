@@ -4,8 +4,8 @@
   "description": "A romantic Tamagotchi-style game for Lulu - Take care of your adorable pocket Dario!",
   "main": "index.html",
   "scripts": {
-    "start": "npx http-server -p 8080 -c-1",
-    "dev": "npx http-server -p 8080 -c-1 --cors",
+    "start": "npx http-server -p 8000 -c-1",
+    "dev": "npx http-server -p 8000 -c-1 --cors",
     "build": "echo 'No build step required for static files'",
     "test": "echo 'No tests configured yet'"
   },
