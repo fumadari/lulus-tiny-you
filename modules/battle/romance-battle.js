@@ -24,7 +24,7 @@ export class RomanceBattle {
                 sprite: '👩‍🎨',
                 level: Math.floor(Math.random() * 3) + 1,
                 moves: [
-                    { name: 'Ask About Your Music Taste', damage: 15, description: '"What bands are you into?"' },
+                    { name: 'Green Card Offer', damage: 15, description: '"Do you want a green card? I can help..."' },
                     { name: 'Coffee Shop Invite', damage: 20, description: '"Wanna grab coffee at my favorite spot?"' },
                     { name: 'Art Gallery Suggestion', damage: 18, description: '"There\'s this amazing gallery opening..."' },
                     { name: 'Pretentious Quote', damage: 12, description: '"As Kafka once said..."' }
@@ -39,7 +39,7 @@ export class RomanceBattle {
                 level: Math.floor(Math.random() * 4) + 2,
                 moves: [
                     { name: 'Salary Flex', damage: 25, description: '"I just got a huge bonus..."' },
-                    { name: 'Expensive Restaurant Invite', damage: 22, description: '"Let me take you to Le Bernardin"' },
+                    { name: 'Expensive Restaurant Invite', damage: 22, description: '"Let me take you to Mo\'s for pizza"' },
                     { name: 'Stock Tip', damage: 15, description: '"I have insider info on this stock..."' },
                     { name: 'Name Drop', damage: 18, description: '"I know the CEO personally"' }
                 ],
@@ -180,9 +180,9 @@ export class RomanceBattle {
                 }
             },
             {
-                name: 'Talk About Taxes',
+                name: 'Talk About Joshua',
                 damage: 40,
-                description: '"Did you know about the new tax regulations?"',
+                description: '"So my friend Joshua has this really interesting story..."',
                 type: 'boring',
                 effectiveness: {
                     'Artsy': 1.8,
@@ -208,10 +208,10 @@ export class RomanceBattle {
                 }
             },
             {
-                name: 'Pretend To Vomit',
+                name: 'Sniff Them',
                 damage: 28,
-                description: '*makes gagging sounds* "I don\'t feel so good..."',
-                type: 'gross',
+                description: '*leans in and takes a deep sniff* "Mmm, you smell interesting..."',
+                type: 'creepy',
                 effectiveness: {
                     'Artsy': 1.4,
                     'Corporate': 2.1,
