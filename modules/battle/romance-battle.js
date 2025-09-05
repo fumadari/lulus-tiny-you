@@ -19,7 +19,8 @@ export class RomanceBattle {
     getRandomOpponent() {
         const opponents = [
             {
-                name: 'Brooklyn Hipster Girl',
+                name: 'Zoe',
+                fullName: 'Brooklyn Hipster Girl',
                 type: 'Artsy',
                 sprite: '👩‍🎨',
                 level: Math.floor(Math.random() * 3) + 1,
@@ -33,7 +34,8 @@ export class RomanceBattle {
                 personality: 'intellectual'
             },
             {
-                name: 'Manhattan Finance Bro',
+                name: 'Madison',
+                fullName: 'Manhattan Finance Bro',
                 type: 'Corporate',
                 sprite: '👩‍💼',
                 level: Math.floor(Math.random() * 4) + 2,
@@ -47,7 +49,8 @@ export class RomanceBattle {
                 personality: 'materialistic'
             },
             {
-                name: 'Queens Workout Enthusiast',
+                name: 'Tiffany',
+                fullName: 'Queens Workout Enthusiast',
                 type: 'Fitness',
                 sprite: '💪',
                 level: Math.floor(Math.random() * 3) + 1,
@@ -61,7 +64,8 @@ export class RomanceBattle {
                 personality: 'energetic'
             },
             {
-                name: 'Williamsburg Foodie',
+                name: 'Brooklyn',
+                fullName: 'Williamsburg Foodie',
                 type: 'Culinary',
                 sprite: '🍕',
                 level: Math.floor(Math.random() * 3) + 2,
@@ -75,7 +79,8 @@ export class RomanceBattle {
                 personality: 'sophisticated'
             },
             {
-                name: 'East Village Musician',
+                name: 'Skyler',
+                fullName: 'East Village Musician',
                 type: 'Creative',
                 sprite: '🎸',
                 level: Math.floor(Math.random() * 4) + 1,
@@ -89,7 +94,8 @@ export class RomanceBattle {
                 personality: 'romantic'
             },
             {
-                name: 'Upper East Side Socialite',
+                name: 'Chanel',
+                fullName: 'Upper East Side Socialite',
                 type: 'Elite',
                 sprite: '💎',
                 level: Math.floor(Math.random() * 5) + 3,
@@ -362,7 +368,7 @@ export class RomanceBattle {
                         line-height: 1.3;
                     ">
                         <div id="battleLog">
-                            Wild ${this.opponent.name} appeared!<br>
+                            Wild ${this.opponent.fullName || this.opponent.name} appeared!<br>
                             ${this.opponent.name}: "Hey there, cutie! 😘"
                         </div>
                     </div>
