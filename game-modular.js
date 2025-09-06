@@ -711,24 +711,10 @@ class TamagotchiGame {
                 this.ctx.fillStyle = 'white';
                 this.ctx.fillText(girl.sprite, screenX + tileSize/2, screenY + tileSize/2);
                 
-                // Draw name
+                // Draw name (neutral color)
                 this.ctx.font = '8px Arial';
-                this.ctx.fillStyle = '#ff1744';
+                this.ctx.fillStyle = '#ffffff';
                 this.ctx.fillText(girl.name, screenX + tileSize/2, screenY - 5);
-                
-                // Draw pulsing circle if player is nearby
-                const playerX = this.save.player.x;
-                const playerY = this.save.player.y;
-                const distance = Math.abs(playerX - girl.x) + Math.abs(playerY - girl.y);
-                
-                if (distance <= 2) {
-                    const pulse = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
-                    this.ctx.strokeStyle = `rgba(255, 23, 68, ${pulse})`;
-                    this.ctx.lineWidth = 2;
-                    this.ctx.beginPath();
-                    this.ctx.arc(screenX + tileSize/2, screenY + tileSize/2, tileSize/2 + 5, 0, Math.PI * 2);
-                    this.ctx.stroke();
-                }
             }
         });
     }
@@ -2854,26 +2840,36 @@ The better you care for him, the happier he'll be!
             this.hideBattleButton();
             return;
         }
-        
-        let nearGirl = null;
-        const playerX = this.save.player.x;
-        const playerY = this.save.player.y;
-        
-        // Check if player is within 2 tiles of any battle girl
-        for (const girl of this.battleGirls) {
-            const distance = Math.abs(playerX - girl.x) + Math.abs(playerY - girl.y);
-            if (distance <= 2) {
-                nearGirl = girl;
-                break;
+        // Show fight button for the closest visible girl on screen
+        const tileSize = 24;
+        const visibleGirls = this.battleGirls.filter(girl => {
+            const screenX = girl.x * tileSize - this.camera.x;
+            const screenY = girl.y * tileSize - this.camera.y;
+            return screenX >= -tileSize && screenX <= CANVAS_WIDTH &&
+                   screenY >= -tileSize && screenY <= CANVAS_HEIGHT;
+        });
+
+        if (visibleGirls.length === 0) {
+            if (this.nearbyBattleGirl) {
+                this.nearbyBattleGirl = null;
+                this.hideBattleButton();
             }
+            return;
         }
-        
-        if (nearGirl && nearGirl !== this.nearbyBattleGirl) {
-            this.nearbyBattleGirl = nearGirl;
-            this.showBattleButton(nearGirl);
-        } else if (!nearGirl && this.nearbyBattleGirl) {
-            this.nearbyBattleGirl = null;
-            this.hideBattleButton();
+
+        // Choose nearest by manhattan distance (fallback to first)
+        const px = this.save.player.x, py = this.save.player.y;
+        let closest = visibleGirls[0];
+        let bestDist = Math.abs(px - closest.x) + Math.abs(py - closest.y);
+        for (let i = 1; i < visibleGirls.length; i++) {
+            const g = visibleGirls[i];
+            const d = Math.abs(px - g.x) + Math.abs(py - g.y);
+            if (d < bestDist) { closest = g; bestDist = d; }
+        }
+
+        if (closest !== this.nearbyBattleGirl) {
+            this.nearbyBattleGirl = closest;
+            this.showBattleButton(closest);
         }
     }
     
