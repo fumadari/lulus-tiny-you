@@ -46,10 +46,10 @@ class TamagotchiGame {
         this.battleGirls = [
             { id: 'zoe', name: 'Zoe', type: 'Artsy', x: 15, y: 25, sprite: '👩‍🎨' }, // Brooklyn
             { id: 'madison', name: 'Madison', type: 'Corporate', x: 35, y: 20, sprite: '👩‍💼' }, // Manhattan
-            { id: 'tiffany', name: 'Tiffany', type: 'Fitness', x: 45, y: 35, sprite: '💪' }, // Queens
-            { id: 'brooklyn_girl', name: 'Brooklyn', type: 'Culinary', x: 12, y: 30, sprite: '🍕' }, // Williamsburg
-            { id: 'skyler', name: 'Skyler', type: 'Creative', x: 22, y: 28, sprite: '🎸' }, // East Village
-            { id: 'chanel', name: 'Chanel', type: 'Elite', x: 25, y: 12, sprite: '💎' } // Upper East Side
+            { id: 'tiffany', name: 'Tiffany', type: 'Fitness', x: 45, y: 35, sprite: '🏃‍♀️' }, // Queens (woman running)
+            { id: 'brooklyn_girl', name: 'Brooklyn', type: 'Culinary', x: 12, y: 30, sprite: '👩‍🍳' }, // Williamsburg (woman cook)
+            { id: 'skyler', name: 'Skyler', type: 'Creative', x: 22, y: 28, sprite: '👩‍🎤' }, // East Village (woman singer)
+            { id: 'chanel', name: 'Chanel', type: 'Elite', x: 25, y: 12, sprite: '👸' } // Upper East Side (princess)
         ];
         
         this.nearbyBattleGirl = null;
